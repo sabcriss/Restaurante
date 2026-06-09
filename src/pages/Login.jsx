@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Importamos o controle remoto de rotas
+import { useNavigate } from 'react-router-dom';
 import logoImg from '../assets/logo.png';
 import '../App.css';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
   const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
+    console.log("Tentando logar com:", email);
     
+    // Validação dos perfis do trabalho
     if (email === 'admin@restaurante.com' && password === 'admin123') {
+      const usuario = { email, perfil: 'ADMIN' };
+      localStorage.setItem('user_session', JSON.stringify(usuario));
+      console.log("Sessão Admin salva! Navegando...");
       navigate('/');
-    } else {
-      alert('Usuário ou senha incorretos!');
+    } 
+    else if (email === 'atendente@restaurante.com' && password === 'atendente123') {
+      const usuario = { email, perfil: 'ATENDENTE' };
+      localStorage.setItem('user_session', JSON.stringify(usuario));
+      console.log("Sessão Atendente salva! Navegando...");
+      navigate('/');
+    } 
+    else {
+      alert('Usuário ou senha incorretos! Use as credenciais de teste.');
     }
   };
 
@@ -35,7 +46,7 @@ function Login() {
             <input 
               type="email" 
               id="email"
-              placeholder="Ex: gerente@restaurante.com" 
+              placeholder="admin@restaurante.com" 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required 
@@ -51,7 +62,7 @@ function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required 
-            />
+            /> {/* <--- Tag fechada corretamente aqui! */}
           </div>
 
           <button type="submit" className="login-button">
@@ -60,7 +71,8 @@ function Login() {
         </form>
 
         <p className="test-credentials">
-          Usuário de teste: admin@restaurante.com / admin123
+          <strong>ADMIN:</strong> admin@restaurante.com / admin123 <br />
+          <strong>ATENDENTE:</strong> atendente@restaurante.com / atendente123
         </p>
       </div>
     </div>
