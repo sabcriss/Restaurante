@@ -94,3 +94,75 @@
   color: #888;
   font-size: 12px;
 }
+
+/* ==============================
+   APRESENTAÇÃO DA LOGO PREMIUM
+   ============================== */
+.logo-premium {
+  border-radius: 12px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  filter: drop-shadow(0 6px 12px rgba(255, 110, 53, 0.18));
+  transition: all 0.3s ease;
+  display: block;
+}
+
+.logo-premium:hover {
+  transform: scale(1.05) rotate(1deg);
+  filter: drop-shadow(0 10px 20px rgba(255, 110, 53, 0.28));
+  background: #ffffff;
+}
+
+/* Container de Reservas Públicas (semelhante ao login-container) */
+.reservas-publicas-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  min-height: 100vh;
+  background-color: #ff6e35; 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  padding: 40px 20px;
+  overflow-y: auto;
+}
+
+/* Card centralizado e mais largo que o login-card */
+.reservas-publicas-card {
+  background: #ffffff;
+  padding: 35px 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 860px; /* Mais largo para acomodar a tabela e o grid de mesas */
+  text-align: center;
+}
+
+/* Logotipo clicável com efeito de transição suave */
+.logo-clicavel {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: block;
+}
+
+.logo-clicavel:hover {
+  transform: scale(1.05);
+}
+
+/* Logo da página pública: maior, hover discreto, sem rotação ou desfoque */
+.logo-publica {
+  max-height: 150px !important;
+  width: auto;
+  margin: 0 auto;
+  display: block;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+}
+
+.logo-publica:hover {
+  transform: scale(1.02); /* Efeito de hover bem discreto, sem rotação e sem desfoque */
+}
+

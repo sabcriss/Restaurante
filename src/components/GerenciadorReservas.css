@@ -1,0 +1,492 @@
+/* ==============================
+   ESTILOS PREMIUM DO GERENCIADOR DE RESERVAS
+   ============================== */
+
+/* Tipografia e Layout Geral */
+.gerenciador-reservas {
+  color: #334155;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Grid de Mesas no Salão */
+.grid-mesas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px;
+  margin-top: 15px;
+}
+
+/* Card Individual de Mesa */
+.card-mesa {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.card-mesa:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 20px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.card-mesa::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+}
+
+/* Cores de Status das Mesas */
+.card-mesa.disponível::before {
+  background-color: #10b981;
+  /* Verde Esmeralda */
+}
+
+.card-mesa.disponível:hover {
+  border-color: #10b981;
+  box-shadow: 0 10px 20px -3px rgba(16, 185, 129, 0.15);
+}
+
+.card-mesa.reservada::before {
+  background-color: #f59e0b;
+  /* Laranja/Amber */
+}
+
+.card-mesa.reservada:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 10px 20px -3px rgba(245, 158, 11, 0.15);
+}
+
+.card-mesa.ocupada::before {
+  background-color: #ef4444;
+  /* Vermelho Crimson */
+}
+
+.card-mesa.ocupada:hover {
+  border-color: #ef4444;
+  box-shadow: 0 10px 20px -3px rgba(239, 68, 68, 0.15);
+}
+
+/* Detalhes da Mesa */
+.mesa-numero {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.mesa-capacidade {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.mesa-status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.disponível .mesa-status-badge {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.reservada .mesa-status-badge {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.ocupada .mesa-status-badge {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+/* Indicador de Status (Legenda) */
+.indicador-status {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.indicador-status.disponivel {
+  background-color: #10b981;
+}
+
+.indicador-status.reservada {
+  background-color: #f59e0b;
+}
+
+.indicador-status.ocupada {
+  background-color: #ef4444;
+}
+
+/* Formulário Premium */
+.premium-form-card {
+  border-radius: 16px !important;
+  border-top: 4px solid #ff6e35 !important;
+  margin-bottom: 35px !important;
+  /* Aumenta o espaçamento vertical após o formulário */
+}
+
+/* Container de Formulário em Flexbox */
+.flex-form-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 25px 20px;
+  /* Aumenta o espaçamento vertical entre linhas de inputs */
+  align-items: flex-end;
+  width: 100%;
+}
+
+.flex-form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Espaçamento vertical entre o label e o input aumentado */
+}
+
+/* Distribuição dinâmica das larguras dos inputs */
+.flex-form-item.col-curta {
+  flex: 1 1 120px;
+}
+
+.flex-form-item.col-media {
+  flex: 1.5 1 200px;
+}
+
+.flex-form-item.col-larga {
+  flex: 2.5 1 300px;
+}
+
+/* Espaçamento das etiquetas de texto */
+.form-label {
+  margin-bottom: 0px;
+  /* Controlado pelo gap do flex-form-item */
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.premium-input,
+.premium-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px 16px;
+  /* Aumenta o padding interno para mais espaçamento vertical */
+  font-size: 14px;
+  transition: all 0.25s ease;
+  color: #1e293b;
+  background-color: #f8fafc;
+  width: 100%;
+}
+
+.premium-input:focus,
+.premium-select:focus {
+  border-color: #ff6e35 !important;
+  box-shadow: 0 0 0 3px rgba(255, 110, 53, 0.2) !important;
+  background-color: #ffffff;
+  outline: none;
+}
+
+/* Botões Premium */
+.btn-premium,
+.btn-premium-submit {
+  background-color: #ff6e35 !important;
+  border-color: #ff6e35 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  padding: 12px 24px !important;
+  /* Aumenta o tamanho vertical e horizontal dos botões */
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 4px rgba(255, 110, 53, 0.1) !important;
+}
+
+.btn-premium:hover,
+.btn-premium-submit:hover {
+  background-color: #e55b24 !important;
+  border-color: #e55b24 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(255, 110, 53, 0.2) !important;
+}
+
+.btn-premium:active,
+.btn-premium-submit:active {
+  transform: translateY(1px) !important;
+}
+
+/* Botão de Cancelar Premium */
+.btn-premium-cancel {
+  background-color: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+  padding: 12px 24px !important;
+  /* Aumenta o tamanho vertical e horizontal dos botões */
+  border-radius: 8px !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-premium-cancel:hover {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-premium-cancel:active {
+  transform: translateY(1px) !important;
+}
+
+/* Entradas de Busca e Filtro */
+.busca-input {
+  min-width: 220px;
+}
+
+.filtro-select {
+  min-width: 150px;
+}
+
+/* Badges de Status na Tabela */
+.badge-status {
+  border: none;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 30px;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-status.pendente {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-status.confirmada {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badge-status.ocupada {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-status.concluída {
+  background-color: #e0f2fe;
+  color: #075985;
+}
+
+.badge-status.cancelada {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+/* Botões de Ação na Tabela */
+.btn-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #64748b;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.btn-light-danger {
+  background-color: #fff5f5;
+  color: #ef4444;
+  border: 1px solid #fee2e2;
+}
+
+.btn-light-danger:hover {
+  background-color: #ef4444;
+  color: #ffffff;
+  border-color: #ef4444;
+}
+
+/* Tabela Customizada */
+.table th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  background-color: #f8fafc;
+  padding: 12px 16px;
+}
+
+.table td {
+  padding: 14px 16px;
+  font-size: 14px;
+}
+
+/* Botão Outline Premium */
+.btn-premium-outline {
+  border: 2px solid #ff6e35 !important;
+  color: #ff6e35 !important;
+  background-color: transparent !important;
+  transition: all 0.25s ease !important;
+}
+
+.btn-premium-outline:hover {
+  background-color: #ff6e35 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(255, 110, 53, 0.2) !important;
+}
+
+/* Layout flexível de mesas para a página pública */
+.grid-mesas-flex {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.grid-mesas-flex .card-mesa {
+  flex: 1 1 calc(25% - 15px);
+  /* Divide as mesas em colunas dinâmicas (visando 2 linhas para 8 mesas) */
+  min-width: 140px;
+  max-width: 180px;
+}
+
+/* Tabela mais fina para visualização no card central da página pública */
+.tabela-fina {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.tabela-fina th {
+  font-size: 11px !important;
+  padding: 8px 10px !important;
+  text-transform: uppercase;
+}
+
+.tabela-fina td {
+  font-size: 13px !important;
+  padding: 8px 10px !important;
+}
+
+/* Dropbox de Status (Select) estilizado na tabela */
+.select-status-badge {
+  border: 1px solid #cbd5e1;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 30px;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%23475569' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
+}
+
+.select-status-badge.pendente {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+
+.select-status-badge.confirmada {
+  background-color: #d1fae5;
+  color: #065f46;
+  border-color: #6ee7b7;
+}
+
+.select-status-badge.ocupada {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.select-status-badge.concluída {
+  background-color: #e0f2fe;
+  color: #075985;
+  border-color: #7dd3fc;
+}
+
+.select-status-badge.cancelada {
+  background-color: #f1f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+/* Espaçamento vertical extra entre as seções do gerenciador */
+.gerenciador-reservas section {
+  margin-bottom: 35px !important;
+}
+
+/* Espaçamento vertical nos cabeçalhos e subtítulos */
+.gerenciador-reservas h3,
+.gerenciador-reservas h5,
+.gerenciador-reservas .card-title {
+  margin-bottom: 22px !important;
+}
+
+/* Margem vertical nos parágrafos informativos */
+.gerenciador-reservas p {
+  margin-top: 15px !important;
+  margin-bottom: 15px !important;
+}
+
+/* Espaçamento vertical entre os inputs do formulário e os botões */
+.premium-form-card form {
+  margin-top: 15px !important;
+}
+
+/* Input Numérico Premium na Tabela Administrativa */
+.premium-input-tabela {
+  width: 60px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  color: #1e293b;
+  background-color: #f8fafc;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.premium-input-tabela:focus {
+  border-color: #ff6e35 !important;
+  box-shadow: 0 0 0 2px rgba(255, 110, 53, 0.2) !important;
+  background-color: #ffffff;
+  outline: none;
+}
