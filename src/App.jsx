@@ -65,7 +65,17 @@ function App() {
             </ProtectedRoute>
           } 
         />
- 
+
+        {/* Rota administrativa protegida de gerenciamento de cardápio */}
+        <Route 
+          path="/cardapio" 
+          element={
+            <ProtectedRoute>
+              <Dashboard activeTab="cardapio" />
+            </ProtectedRoute>
+          } 
+        />
+
         {/* Rota raiz do dashboard original (Protegida) */}
         <Route 
           path="/" 

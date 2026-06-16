@@ -8,7 +8,10 @@ dotenv.config();
 // Servidores DNS públicos para contornar falhas de resolução SRV do MongoDB Atlas no Node.js
 const SERVIDORES_DNS = ['8.8.8.8', '1.1.1.1'];
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:5173/restaurante';
+// Carrega o .env corretamente voltando uma pasta, e usa o link do seu grupo como fallback de segurança
+dotenv.config({ path: '../.env' });
+
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://p0nt4s_db_user:82442mmsm@p0nt4s.tvgpr30.mongodb.net/restaurante?appName=P0nt4s&retryWrites=true&w=majority';
 
 /**
  * @function conectarBanco

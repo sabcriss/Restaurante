@@ -5,6 +5,8 @@ import { conectarBanco } from './db.js';
 import { ReservaRepositorio } from './repositorios/ReservaRepositorio.js';
 import { MesaRepositorio } from './repositorios/MesaRepositorio.js';
 import { PedidoRepositorio } from './repositorios/PedidoRepositorio.js';
+import { ProdutoCardapioRepositorio } from './repositorios/ProdutoCardapioRepositorio.js';
+
 
 // Carrega as variáveis de ambiente
 dotenv.config();
@@ -16,6 +18,7 @@ const PORTA = process.env.PORT || 5001;
 const repositorioReservas = new ReservaRepositorio();
 const repositorioMesas = new MesaRepositorio();
 const repositorioPedidos = new PedidoRepositorio();
+const repositorioProdutos = new ProdutoCardapioRepositorio();
 
 // Middlewares
 app.use(cors());
@@ -157,6 +160,80 @@ app.delete('/api/pedidos/:id', async (req, res) => {
     res.status(500).json({ erro: 'Erro interno ao excluir pedido.' });
   }
 });
+
+/* ==============================
+   ROTAS DO CARDÁPIO (PRODUTOS)
+   ============================== */
+
+/**
+ * @route GET /api/produtos
+ * @description Retorna o cardápio completo do BD.
+ */
+app.get('/api/produtos', async (req, res) => {
+  try {
+    const produtos = await repositorioProdutos.buscarTodos();
+    res.json(produtos);
+  } catch (erro) {
+    console.error('Erro ao buscar produtos:', erro.message);
+    res.status(500).json({ erro: 'Erro interno ao carregar o cardápio.' });
+  }
+});
+
+/**
+ * @route POST /api/produtos
+ * @description Cria um novo produto no cardápio.
+ */
+app.post('/api/produtos', async (req, res) => {
+  try {
+    const dados = req.body;
+    if (!dados.nome || !dados.precoBase || !dados.categoria) {
+      return res.status(400).json({ erro: 'Campos obrigatórios ausentes: nome, precoBase, categoria.' });
+    }
+    const novoProduto = await repositorioProdutos.criar(dados);
+    res.status(201).json(novoProduto);
+  } catch (erro) {
+    console.error('Erro ao criar produto:', erro.message);
+    res.status(500).json({ erro: 'Erro interno ao criar produto no cardápio.' });
+  }
+});
+
+/**
+ * @route PATCH /api/produtos/:id
+ * @description Atualiza um produto existente no cardápio.
+ */
+app.patch('/api/produtos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const dadosAtualizados = req.body;
+    const atualizado = await repositorioProdutos.atualizar(id, dadosAtualizados);
+    if (!atualizado) {
+      return res.status(404).json({ erro: `Produto com ID "${id}" não encontrado.` });
+    }
+    res.json({ sucesso: true, mensagem: `Produto ${id} atualizado com sucesso.`, produto: atualizado });
+  } catch (erro) {
+    console.error('Erro ao atualizar produto:', erro.message);
+    res.status(500).json({ erro: 'Erro interno ao atualizar produto.' });
+  }
+});
+
+/**
+ * @route DELETE /api/produtos/:id
+ * @description Remove um produto do cardápio.
+ */
+app.delete('/api/produtos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const excluido = await repositorioProdutos.deletar(id);
+    if (!excluido) {
+      return res.status(404).json({ erro: `Produto com ID "${id}" não encontrado.` });
+    }
+    res.json({ sucesso: true, mensagem: `Produto ${id} excluído com sucesso.` });
+  } catch (erro) {
+    console.error('Erro ao excluir produto:', erro.message);
+    res.status(500).json({ erro: 'Erro interno ao excluir produto.' });
+  }
+});
+
 
 /**
  * Inicializa o servidor com conexão prévia ao bd.
