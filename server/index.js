@@ -1,320 +1,1 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import { conectarBanco } from './db.js';
-import { ReservaRepositorio } from './repositorios/ReservaRepositorio.js';
-import { MesaRepositorio } from './repositorios/MesaRepositorio.js';
-import { PedidoRepositorio } from './repositorios/PedidoRepositorio.js';
-import { ProdutoCardapioRepositorio } from './repositorios/ProdutoCardapioRepositorio.js';
-import { UsuarioRepositorio } from './repositorios/UsuarioRepositorio.js';
-
-// Carrega as variáveis de ambiente
-dotenv.config();
-
-const app = express();
-const PORTA = process.env.PORT || 5001;
-
-// Instanciação dos repositórios NoSQL de backend
-const repositorioReservas = new ReservaRepositorio();
-const repositorioMesas = new MesaRepositorio();
-const repositorioPedidos = new PedidoRepositorio();
-const repositorioProdutos = new ProdutoCardapioRepositorio();
-const repositorioUsuarios = new UsuarioRepositorio();
-
-// Middlewares
-app.use(cors());
-app.use(express.json()); // Processa requisições em JSON
-
-/* ==============================
-   ROTAS DA API REST
-   ============================== */
-
-/**
- * @route GET /api/reservas
- * @description Retorna a lista das reservas no BD.
- */
-app.get('/api/reservas', async (req, res) => {
-  try {
-    const reservas = await repositorioReservas.obterTodasReservas();
-    res.json(reservas);
-  } catch (erro) {
-    console.error('Erro ao buscar reservas:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao carregar reservas.' });
-  }
-});
-
-/**
- * @route POST /api/reservas
- * @description Atualiza ou insere em lote a lista de reservas.
- */
-app.post('/api/reservas', async (req, res) => {
-  try {
-    const reservas = req.body;
-    if (!Array.isArray(reservas)) {
-      return res.status(400).json({ erro: 'O payload de reservas deve ser uma lista (Array).' });
-    }
-    await repositorioReservas.salvarReservas(reservas);
-    res.json({ sucesso: true, mensagem: 'Reservas salvas com sucesso no MongoDB.' });
-  } catch (erro) {
-    console.error('Erro ao salvar reservas:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao salvar reservas.' });
-  }
-});
-
-/**
- * @route GET /api/mesas
- * @description Retorna a lista das mesas no BD.
- */
-app.get('/api/mesas', async (req, res) => {
-  try {
-    const mesas = await repositorioMesas.obterTodasMesas();
-    res.json(mesas);
-  } catch (erro) {
-    console.error('Erro ao buscar mesas:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao carregar mesas.' });
-  }
-});
-
-/**
- * @route POST /api/mesas
- * @description Atualiza ou insere em lote a lista das mesas.
- */
-app.post('/api/mesas', async (req, res) => {
-  try {
-    const mesas = req.body;
-    if (!Array.isArray(mesas)) {
-      return res.status(400).json({ erro: 'O payload de mesas deve ser uma lista (Array).' });
-    }
-    await repositorioMesas.salvarMesas(mesas);
-    res.json({ sucesso: true, mensagem: 'Mesas salvas com sucesso no MongoDB.' });
-  } catch (erro) {
-    console.error('Erro ao salvar mesas:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao salvar mesas.' });
-  }
-});
-
-/**
- * @route GET /api/pedidos
- * @description Retorna a lista de todos os pedidos no BD, ordenados por data de abertura.
- */
-app.get('/api/pedidos', async (req, res) => {
-  try {
-    const pedidos = await repositorioPedidos.obterTodosPedidos();
-    res.json(pedidos);
-  } catch (erro) {
-    console.error('Erro ao buscar pedidos:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao carregar pedidos.' });
-  }
-});
-
-/**
- * @route POST /api/pedidos
- * @description Cria um novo pedido.
- */
-app.post('/api/pedidos', async (req, res) => {
-  try {
-    const dados = req.body;
-    if (!dados.id || !dados.mesaNumero || !dados.clienteNome) {
-      return res.status(400).json({ erro: 'Campos obrigatórios ausentes: id, mesaNumero, clienteNome.' });
-    }
-    const novoPedido = await repositorioPedidos.criarPedido(dados);
-    res.status(201).json(novoPedido);
-  } catch (erro) {
-    console.error('Erro ao criar pedido:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao criar pedido.' });
-  }
-});
-
-/**
- * @route PATCH /api/pedidos/:id
- * @description Atualiza campos específicos de um pedido existente.
- */
-app.patch('/api/pedidos/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const dadosAtualizados = req.body;
-    const atualizado = await repositorioPedidos.atualizarPedido(id, dadosAtualizados);
-    if (!atualizado) {
-      return res.status(404).json({ erro: `Pedido com ID "${id}" não encontrado.` });
-    }
-    res.json({ sucesso: true, mensagem: `Pedido ${id} atualizado com sucesso.` });
-  } catch (erro) {
-    console.error('Erro ao atualizar pedido:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao atualizar pedido.' });
-  }
-});
-
-/**
- * @route DELETE /api/pedidos/:id
- * @description Remove um pedido pelo seu código identificador.
- */
-app.delete('/api/pedidos/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const excluido = await repositorioPedidos.excluirPedido(id);
-    if (!excluido) {
-      return res.status(404).json({ erro: `Pedido com ID "${id}" não encontrado.` });
-    }
-    res.json({ sucesso: true, mensagem: `Pedido ${id} excluído com sucesso.` });
-  } catch (erro) {
-    console.error('Erro ao excluir pedido:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao excluir pedido.' });
-  }
-});
-
-/* ==============================
-   ROTAS DO CARDÁPIO (PRODUTOS)
-   ============================== */
-
-/**
- * @route GET /api/produtos
- * @description Retorna o cardápio completo do BD.
- */
-app.get('/api/produtos', async (req, res) => {
-  try {
-    const produtos = await repositorioProdutos.buscarTodos();
-    res.json(produtos);
-  } catch (erro) {
-    console.error('Erro ao buscar produtos:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao carregar o cardápio.' });
-  }
-});
-
-/**
- * @route POST /api/produtos
- * @description Cria um novo produto no cardápio.
- */
-app.post('/api/produtos', async (req, res) => {
-  try {
-    const dados = req.body;
-    if (!dados.nome || !dados.precoBase || !dados.categoria) {
-      return res.status(400).json({ erro: 'Campos obrigatórios ausentes: nome, precoBase, categoria.' });
-    }
-    const novoProduto = await repositorioProdutos.criar(dados);
-    res.status(201).json(novoProduto);
-  } catch (erro) {
-    console.error('Erro ao criar produto:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao criar produto no cardápio.' });
-  }
-});
-
-/**
- * @route PATCH /api/produtos/:id
- * @description Atualiza um produto existente no cardápio.
- */
-app.patch('/api/produtos/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const dadosAtualizados = req.body;
-    const atualizado = await repositorioProdutos.atualizar(id, dadosAtualizados);
-    if (!atualizado) {
-      return res.status(404).json({ erro: `Produto com ID "${id}" não encontrado.` });
-    }
-    res.json({ sucesso: true, mensagem: `Produto ${id} atualizado com sucesso.`, produto: atualizado });
-  } catch (erro) {
-    console.error('Erro ao atualizar produto:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao atualizar produto.' });
-  }
-});
-
-/**
- * @route DELETE /api/produtos/:id
- * @description Remove um produto do cardápio.
- */
-app.delete('/api/produtos/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const excluido = await repositorioProdutos.deletar(id);
-    if (!excluido) {
-      return res.status(404).json({ erro: `Produto com ID "${id}" não encontrado.` });
-    }
-    res.json({ sucesso: true, mensagem: `Produto ${id} excluído com sucesso.` });
-  } catch (erro) {
-    console.error('Erro ao excluir produto:', erro.message);
-    res.status(500).json({ erro: 'Erro interno ao excluir produto.' });
-  }
-});
-
-
-/**
- * Inicializa o servidor com conexão prévia ao bd.
- */
-async function iniciarServidor() {
-  await conectarBanco();
-
-  app.listen(PORTA, () => {
-    console.log(`>>> [Backend] Servidor rodando com sucesso na porta ${PORTA}.`);
-  });
-}
-
-// ==========================================
-// ROTAS DE USUÁRIOS
-// ==========================================
-
-// READ: Listar todos
-app.get('/api/usuarios', async (req, res) => {
-  try {
-    const usuarios = await repositorioUsuarios.buscarTodos();
-    res.json(usuarios);
-  } catch (erro) {
-    res.status(500).json({ erro: 'Erro ao buscar usuários' });
-  }
-});
-
-// CREATE: Criar novo
-app.post('/api/usuarios', async (req, res) => {
-  try {
-    const novoUsuario = await repositorioUsuarios.criar(req.body);
-    res.status(201).json(novoUsuario);
-  } catch (erro) {
-    res.status(400).json({ erro: 'Erro ao criar usuário', detalhes: erro.message });
-  }
-});
-
-// UPDATE: Atualizar existente
-app.put('/api/usuarios/:id', async (req, res) => {
-  try {
-    const usuarioAtualizado = await repositorioUsuarios.atualizar(req.params.id, req.body);
-    res.json(usuarioAtualizado);
-  } catch (erro) {
-    res.status(400).json({ erro: 'Erro ao atualizar usuário' });
-  }
-});
-
-// DELETE: Deletar
-app.delete('/api/usuarios/:id', async (req, res) => {
-  try {
-    await repositorioUsuarios.deletar(req.params.id);
-    res.json({ mensagem: 'Usuário deletado com sucesso' });
-  } catch (erro) {
-    res.status(500).json({ erro: 'Erro ao deletar usuário' });
-  }
-});
-
-// ==========================================
-// ROTA DE AUTENTICAÇÃO (LOGIN)
-// ==========================================
-app.post('/api/login', async (req, res) => {
-  try {
-    const { email, senha } = req.body;
-    
-    // Busca todos os usuários e procura um que bata com o email e senha
-    const usuarios = await repositorioUsuarios.buscarTodos();
-    const usuarioValido = usuarios.find(u => u.email === email && u.senha === senha);
-
-    if (usuarioValido) {
-      // Se achou, devolve os dados de sessão
-      res.json({ 
-        sucesso: true, 
-        usuario: { nome: usuarioValido.nome, perfil: usuarioValido.perfil, email: usuarioValido.email } 
-      });
-    } else {
-      res.status(401).json({ erro: 'Usuário ou senha incorretos!' });
-    }
-  } catch (erro) {
-    res.status(500).json({ erro: 'Erro interno ao processar o login.' });
-  }
-});
-
-
-iniciarServidor();
+import express from 'express';import cors from 'cors';import dotenv from 'dotenv';import { conectarBanco } from './db.js';import { ReservaRepositorio } from './repositorios/ReservaRepositorio.js';import { MesaRepositorio } from './repositorios/MesaRepositorio.js';import { PedidoRepositorio } from './repositorios/PedidoRepositorio.js';import { ProdutoCardapioRepositorio } from './repositorios/ProdutoCardapioRepositorio.js';import { UsuarioRepositorio } from './repositorios/UsuarioRepositorio.js';dotenv.config();const app = express();const PORTA = process.env.PORT || 5001;const repositorioReservas = new ReservaRepositorio();const repositorioMesas = new MesaRepositorio();const repositorioPedidos = new PedidoRepositorio();const repositorioProdutos = new ProdutoCardapioRepositorio();const repositorioUsuarios = new UsuarioRepositorio();app.use(cors());app.use(express.json()); app.get('/api/reservas', async (req, res) => {  try {    const reservas = await repositorioReservas.obterTodasReservas();    res.json(reservas);  } catch (erro) {    console.error('Erro ao buscar reservas:', erro.message);    res.status(500).json({ erro: 'Erro interno ao carregar reservas.' });  }});app.post('/api/reservas', async (req, res) => {  try {    const reservas = req.body;    if (!Array.isArray(reservas)) {      return res.status(400).json({ erro: 'O payload de reservas deve ser uma lista (Array).' });    }    await repositorioReservas.salvarReservas(reservas);    res.json({ sucesso: true, mensagem: 'Reservas salvas com sucesso no MongoDB.' });  } catch (erro) {    console.error('Erro ao salvar reservas:', erro.message);    res.status(500).json({ erro: 'Erro interno ao salvar reservas.' });  }});app.get('/api/mesas', async (req, res) => {  try {    const mesas = await repositorioMesas.obterTodasMesas();    res.json(mesas);  } catch (erro) {    console.error('Erro ao buscar mesas:', erro.message);    res.status(500).json({ erro: 'Erro interno ao carregar mesas.' });  }});app.post('/api/mesas', async (req, res) => {  try {    const mesas = req.body;    if (!Array.isArray(mesas)) {      return res.status(400).json({ erro: 'O payload de mesas deve ser uma lista (Array).' });    }    await repositorioMesas.salvarMesas(mesas);    res.json({ sucesso: true, mensagem: 'Mesas salvas com sucesso no MongoDB.' });  } catch (erro) {    console.error('Erro ao salvar mesas:', erro.message);    res.status(500).json({ erro: 'Erro interno ao salvar mesas.' });  }});app.get('/api/pedidos', async (req, res) => {  try {    const pedidos = await repositorioPedidos.obterTodosPedidos();    res.json(pedidos);  } catch (erro) {    console.error('Erro ao buscar pedidos:', erro.message);    res.status(500).json({ erro: 'Erro interno ao carregar pedidos.' });  }});app.post('/api/pedidos', async (req, res) => {  try {    const dados = req.body;    if (!dados.id || !dados.mesaNumero || !dados.clienteNome) {      return res.status(400).json({ erro: 'Campos obrigatórios ausentes: id, mesaNumero, clienteNome.' });    }    const novoPedido = await repositorioPedidos.criarPedido(dados);    res.status(201).json(novoPedido);  } catch (erro) {    console.error('Erro ao criar pedido:', erro.message);    res.status(500).json({ erro: 'Erro interno ao criar pedido.' });  }});app.patch('/api/pedidos/:id', async (req, res) => {  try {    const { id } = req.params;    const dadosAtualizados = req.body;    const atualizado = await repositorioPedidos.atualizarPedido(id, dadosAtualizados);    if (!atualizado) {      return res.status(404).json({ erro: `Pedido com ID "${id}" não encontrado.` });    }    res.json({ sucesso: true, mensagem: `Pedido ${id} atualizado com sucesso.` });  } catch (erro) {    console.error('Erro ao atualizar pedido:', erro.message);    res.status(500).json({ erro: 'Erro interno ao atualizar pedido.' });  }});app.delete('/api/pedidos/:id', async (req, res) => {  try {    const { id } = req.params;    const excluido = await repositorioPedidos.excluirPedido(id);    if (!excluido) {      return res.status(404).json({ erro: `Pedido com ID "${id}" não encontrado.` });    }    res.json({ sucesso: true, mensagem: `Pedido ${id} excluído com sucesso.` });  } catch (erro) {    console.error('Erro ao excluir pedido:', erro.message);    res.status(500).json({ erro: 'Erro interno ao excluir pedido.' });  }});app.get('/api/produtos', async (req, res) => {  try {    const produtos = await repositorioProdutos.buscarTodos();    res.json(produtos);  } catch (erro) {    console.error('Erro ao buscar produtos:', erro.message);    res.status(500).json({ erro: 'Erro interno ao carregar o cardápio.' });  }});app.post('/api/produtos', async (req, res) => {  try {    const dados = req.body;    if (!dados.nome || !dados.precoBase || !dados.categoria) {      return res.status(400).json({ erro: 'Campos obrigatórios ausentes: nome, precoBase, categoria.' });    }    const novoProduto = await repositorioProdutos.criar(dados);    res.status(201).json(novoProduto);  } catch (erro) {    console.error('Erro ao criar produto:', erro.message);    res.status(500).json({ erro: 'Erro interno ao criar produto no cardápio.' });  }});app.patch('/api/produtos/:id', async (req, res) => {  try {    const { id } = req.params;    const dadosAtualizados = req.body;    const atualizado = await repositorioProdutos.atualizar(id, dadosAtualizados);    if (!atualizado) {      return res.status(404).json({ erro: `Produto com ID "${id}" não encontrado.` });    }    res.json({ sucesso: true, mensagem: `Produto ${id} atualizado com sucesso.`, produto: atualizado });  } catch (erro) {    console.error('Erro ao atualizar produto:', erro.message);    res.status(500).json({ erro: 'Erro interno ao atualizar produto.' });  }});app.delete('/api/produtos/:id', async (req, res) => {  try {    const { id } = req.params;    const excluido = await repositorioProdutos.deletar(id);    if (!excluido) {      return res.status(404).json({ erro: `Produto com ID "${id}" não encontrado.` });    }    res.json({ sucesso: true, mensagem: `Produto ${id} excluído com sucesso.` });  } catch (erro) {    console.error('Erro ao excluir produto:', erro.message);    res.status(500).json({ erro: 'Erro interno ao excluir produto.' });  }});async function iniciarServidor() {  await conectarBanco();  app.listen(PORTA, () => {    console.log(`>>> [Backend] Servidor rodando com sucesso na porta ${PORTA}.`);  });}app.get('/api/usuarios', async (req, res) => {  try {    const usuarios = await repositorioUsuarios.buscarTodos();    res.json(usuarios);  } catch (erro) {    res.status(500).json({ erro: 'Erro ao buscar usuários' });  }});app.post('/api/usuarios', async (req, res) => {  try {    const novoUsuario = await repositorioUsuarios.criar(req.body);    res.status(201).json(novoUsuario);  } catch (erro) {    res.status(400).json({ erro: 'Erro ao criar usuário', detalhes: erro.message });  }});app.put('/api/usuarios/:id', async (req, res) => {  try {    const usuarioAtualizado = await repositorioUsuarios.atualizar(req.params.id, req.body);    res.json(usuarioAtualizado);  } catch (erro) {    res.status(400).json({ erro: 'Erro ao atualizar usuário' });  }});app.delete('/api/usuarios/:id', async (req, res) => {  try {    await repositorioUsuarios.deletar(req.params.id);    res.json({ mensagem: 'Usuário deletado com sucesso' });  } catch (erro) {    res.status(500).json({ erro: 'Erro ao deletar usuário' });  }});app.post('/api/login', async (req, res) => {  try {    const { email, senha } = req.body;    const usuarios = await repositorioUsuarios.buscarTodos();    const usuarioValido = usuarios.find(u => u.email === email && u.senha === senha);    if (usuarioValido) {      res.json({         sucesso: true,         usuario: { nome: usuarioValido.nome, perfil: usuarioValido.perfil, email: usuarioValido.email }       });    } else {      res.status(401).json({ erro: 'Usuário ou senha incorretos!' });    }  } catch (erro) {    res.status(500).json({ erro: 'Erro interno ao processar o login.' });  }});iniciarServidor();

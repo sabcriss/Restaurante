@@ -1,58 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { ReservaServico } from '../servicos/ReservaServico';
 import './GerenciadorReservas.css';
-
 const servicoReservas = new ReservaServico();
-
-/**
- * @function GerenciadorReservas
- * @description Componente pro gerenciamento de reservas e mesas.
- * @param {Object} props - Propriedades do componente.
- * @param {Function} [props.aoAlterarReservas] - Callback chamado sempre que uma reserva é alterada.
- * @param {boolean} [props.modoPublico=false] - Define se o componente está sendo usado no modo público(apenas criar reservas) ou administrativo.
- * @returns {React.JSX.Element} Elemento React do gerenciador de reservas.
- */
 export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = false }) {
-  // Estados para dados de reservas e mesas
   const [reservas, setReservas] = useState([]);
   const [mesas, setMesas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
-
-  // Estados de filtros e pesquisa
   const [filtroStatus, setFiltroStatus] = useState('Todos');
   const [buscaCliente, setBuscaCliente] = useState('');
-
-  // Estados de controle do formulário
   const [exibirFormulario, setExibirFormulario] = useState(false);
   const [reservaEmEdicao, setReservaEmEdicao] = useState(null);
-
-  // Estados dos campos do formulário
   const [clienteNome, setClienteNome] = useState('');
   const [mesaNumero, setMesaNumero] = useState('Mesa 1');
   const [dataHora, setDataHora] = useState('');
   const [quantidadePessoas, setQuantidadePessoas] = useState(2);
   const [statusReserva, setStatusReserva] = useState('Pendente');
-
   useEffect(() => {
     carregarDados();
-
     const temporizador = setInterval(() => {
       carregarDados();
     }, 30000);
-
     return () => clearInterval(temporizador);
   }, []);
-
-  /**
-   * Busca os dados atualizados das reservas e mesas através do ReservaServico.
-   * @returns {Promise<void>}
-   */
   const carregarDados = async () => {
     try {
       const listaReservas = await servicoReservas.obterTodasReservas();
       const listaMesas = await servicoReservas.obterTodasMesas();
-
       setReservas(listaReservas);
       setMesas(listaMesas);
     } catch (e) {
@@ -61,30 +35,19 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
       setCarregando(false);
     }
   };
-
-  /**
-   * Prepara o formulário para criar uma nova reserva.
-   */
   const iniciarNovaReserva = () => {
     setReservaEmEdicao(null);
     setClienteNome('');
     setMesaNumero(mesas.length > 0 ? mesas[0].numero : 'Mesa 1');
-
     const agora = new Date();
     agora.setMinutes(agora.getMinutes() - agora.getTimezoneOffset());
     setDataHora(agora.toISOString().slice(0, 16));
-
     setQuantidadePessoas(2);
     setStatusReserva('Pendente');
     setExibirFormulario(true);
   };
-
-  /**
-   * Prepara o formulário para editar uma reserva selecionada.
-   * @param {Object} reserva - O objeto de reserva a ser editado.
-   */
   const iniciarEdicaoReserva = (reserva) => {
-    if (modoPublico) return; // Segurança redundante
+    if (modoPublico) return; 
     setReservaEmEdicao(reserva);
     setClienteNome(reserva.clienteNome);
     setMesaNumero(reserva.mesaNumero);
@@ -93,45 +56,32 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
     setStatusReserva(reserva.status);
     setExibirFormulario(true);
   };
-
-  /**
-   * Salva os dados do formulário (criação ou edição) no repositório.
-   * @param {React.FormEvent} e - Evento de submissão do formulário.
-   */
   const salvarReserva = async (e) => {
     e.preventDefault();
     if (!clienteNome.trim()) {
       alert('Por favor, informe o nome do cliente.');
       return;
     }
-
     try {
       const dados = {
         clienteNome,
         mesaNumero,
         dataHora,
         quantidadePessoas,
-        // Força "Pendente" no modo público pro cliente não conseguir aprovar a própria reserva
         status: modoPublico ? 'Pendente' : statusReserva
       };
-
       if (reservaEmEdicao) {
         if (modoPublico) {
           alert('Ação não permitida para visitantes.');
           return;
         }
-        // Modo de edição
         await servicoReservas.editarReserva(reservaEmEdicao.id, dados);
       } else {
-        // Modo de criação
         await servicoReservas.criarReserva(dados);
         alert('Reserva solicitada com sucesso! Ela ficará Pendente até que o restaurante a confirme.');
       }
-
       setExibirFormulario(false);
       setReservaEmEdicao(null);
-
-      // Recarrega dados locais e notifica componente pai
       await carregarDados();
       if (aoAlterarReservas) {
         aoAlterarReservas();
@@ -140,11 +90,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
       alert('Erro ao salvar reserva: ' + e.message);
     }
   };
-
-  /**
-   * Exclui a depois de confirmar.
-   * @param {string} id - id da reserva.
-   */
   const excluirReserva = async (id) => {
     if (modoPublico) {
       alert('Ação não permitida. Faça login para excluir ou cancelar reservas.');
@@ -153,7 +98,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
     if (window.confirm('Tem certeza que deseja remover esta reserva?')) {
       try {
         await servicoReservas.excluirReserva(id);
-
         await carregarDados();
         if (aoAlterarReservas) {
           aoAlterarReservas();
@@ -163,12 +107,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
       }
     }
   };
-
-  /**
-   * Altera o status da reserva pela tabela.
-   * @param {string} id - id da reserva.
-   * @param {string} novoStatus - Novo status da reserva.
-   */
   const alterarStatusRapido = async (id, novoStatus) => {
     if (modoPublico) return;
     try {
@@ -181,12 +119,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
       alert('Erro ao alterar status da reserva: ' + e.message);
     }
   };
-
-  /**
-   * Altera a quantidade de pessoas da reserva pela tabela.
-   * @param {string} id - id da reserva.
-   * @param {number} novaQtd - Nova quantidade de pessoas.
-   */
   const alterarQuantidadePessoasRapido = async (id, novaQtd) => {
     if (modoPublico) return;
     try {
@@ -199,38 +131,19 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
       alert('Erro ao alterar quantidade de pessoas: ' + e.message);
     }
   };
-
-  /**
-   * Seleciona a mesa no grid e pré-preenche o formulário.
-   * @param {string} numeroMesa - Número da mesa selecionada.
-   */
   const selecionarMesaRapida = (numeroMesa) => {
     iniciarNovaReserva();
     setMesaNumero(numeroMesa);
   };
-
-  /**
-   * Obtém a capacidade máxima da mesa selecionada.
-   * @returns {number} A capacidade da mesa ou 10 caso não seja encontrada.
-   */
   const obterCapacidadeMesaSelecionada = () => {
     const mesaEncontrada = mesas.find(m => m.numero === mesaNumero);
     return mesaEncontrada ? mesaEncontrada.capacidade : 10;
   };
-
-  /**
-   * Obtém a capacidade de pessoas na mesa indicada.
-   * Usa a lista de mesas carregada ou um mapeamento padrão como fallback.
-   * @param {string} numMesa - Nome/número da mesa pesquisada
-   * @returns {number} A capacidade de pessoas na mesa.
-   */
   const obterCapacidadeMesa = (numMesa) => {
     const mesaEncontrada = mesas.find(m => m.numero === numMesa);
     if (mesaEncontrada) {
       return mesaEncontrada.capacidade;
     }
-
-    // Fallback pra evitar problemas se o carregamento assíncrono ainda não tiver finalizado
     const capacidadesPadrao = {
       'Mesa 1': 4,
       'Mesa 2': 4,
@@ -243,21 +156,15 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
     };
     return capacidadesPadrao[numMesa] || 4;
   };
-
-  // Filtro de reservas com base na busca e status (esconde busca por cliente em modo público)
   const reservasFiltradas = reservas.filter(reserva => {
     const atendeStatus = filtroStatus === 'Todos' || reserva.status === filtroStatus;
-
-    // Se público só filtra pela mesa ou ID
     const buscaMinuscula = buscaCliente.toLowerCase();
     const termoNome = modoPublico ? '' : reserva.clienteNome.toLowerCase();
     const atendeBusca = termoNome.includes(buscaMinuscula) ||
       reserva.mesaNumero.toLowerCase().includes(buscaMinuscula) ||
       reserva.id.toLowerCase().includes(buscaMinuscula);
-
     return atendeStatus && atendeBusca;
   });
-
   return (
     <div className="gerenciador-reservas container-fluid px-0">
       {erro && (
@@ -266,14 +173,12 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
           <button type="button" className="btn-close" onClick={() => setErro(null)} aria-label="Close"></button>
         </div>
       )}
-
       {modoPublico && (
         <p className="m-0 small text-center">
           Você pode visualizar a ocupação das mesas e solicitar uma nova reserva para o mesmo dia ou datas futuras.
         </p>
       )}
-
-      {/* SEÇÃO 1: MAPA DE MESAS */}
+      {}
       <section className="mb-4">
         <div className="card shadow-sm border-0">
           <div className="card-body">
@@ -291,7 +196,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
                 </span>
               </div>
             </div>
-
             {carregando ? (
               <div className="text-center py-4">
                 <div className="spinner-border" role="status">
@@ -318,8 +222,7 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
           <p> Janela de ocupação padrão: 6 horas por reserva. Funcionamento: 10:00 às 22:00.</p>
         </div>
       </section>
-
-      {/* SEÇÃO 2: FORMULÁRIO DE CADASTRO/EDIÇÃO */}
+      {}
       {exibirFormulario && (
         <section className="mb-4">
           <div className="card shadow-sm border-top-4 premium-form-card">
@@ -327,7 +230,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
               <h5 className="card-title fw-bold mb-3">
                 {reservaEmEdicao ? `Editar Reserva ${reservaEmEdicao.id}` : 'Nova Reserva'}
               </h5>
-
               <form onSubmit={salvarReserva}>
                 <div className="flex-form-container">
                   <div className="flex-form-item col-larga">
@@ -342,7 +244,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
                       required
                     />
                   </div>
-
                   <div className="flex-form-item col-curta">
                     <label htmlFor="mesaNumero" className="form-label fw-bold">Mesa</label>
                     <select
@@ -365,7 +266,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
                       ))}
                     </select>
                   </div>
-
                   <div className="flex-form-item col-media">
                     <label htmlFor="dataHora" className="form-label fw-bold">Data & Hora</label>
                     <input
@@ -377,7 +277,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
                       required
                     />
                   </div>
-
                   <div className="flex-form-item col-curta">
                     <label htmlFor="quantidadePessoas" className="form-label fw-bold">Pessoas</label>
                     <input
@@ -401,7 +300,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
                       required
                     />
                   </div>
-
                   {!modoPublico && (
                     <div className="flex-form-item col-curta">
                       <label htmlFor="status" className="form-label fw-bold">Status</label>
@@ -420,7 +318,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
                     </div>
                   )}
                 </div>
-
                 <div className="d-flex justify-content-end gap-2 mt-4">
                   <button
                     type="button"
@@ -441,13 +338,11 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
           </div>
         </section>
       )}
-
-      {/* SEÇÃO 3: TABELA E FILTROS */}
+      {}
       <section className="card shadow-sm border-0">
         <div className="card-body">
           <h5 className="card-title fw-bold m-0 text-dark">Lista de Reservas</h5>
           <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-
             <div className="d-flex flex-wrap gap-2">
               <input
                 type="text"
@@ -478,7 +373,6 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
               </button>
             </div>
           </div>
-
           {carregando ? (
             <div className="text-center py-5">
               <div className="spinner-border" role="status">
@@ -507,14 +401,12 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
                   {reservasFiltradas.map((res) => (
                     <tr key={res.id}>
                       <td><strong>{res.id}</strong></td>
-
-                      {/* Oculta coluna do cliente em modo público */}
+                      {}
                       {!modoPublico && (
                         <td className="fw-semibold text-muted">
                           {res.clienteNome}
                         </td>
                       )}
-
                       <td>
                         {new Date(res.dataHora).toLocaleString('pt-BR', {
                           day: '2-digit',
@@ -524,8 +416,7 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
                           minute: '2-digit'
                         })}
                       </td>
-
-                      {/* Oculta coluna de pessoas em modo público */}
+                      {}
                       {!modoPublico && (
                         <td>
                           <div className="d-flex align-items-center gap-1">
@@ -546,9 +437,7 @@ export default function GerenciadorReservas({ aoAlterarReservas, modoPublico = f
                           </div>
                         </td>
                       )}
-
                       <td><span className="fw-medium text-dark">{res.mesaNumero}</span></td>
-
                       <td>
                         {modoPublico ? (
                           <span className={`badge-status d-inline-block text-center ${res.status.toLowerCase()}`}>

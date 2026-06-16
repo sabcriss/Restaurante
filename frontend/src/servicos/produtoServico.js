@@ -1,39 +1,1 @@
-const API_URL = '/api/produtos';
-
-// READ
-export const buscarProdutos = async () => {
-  const resposta = await fetch(API_URL);
-  return resposta.json();
-};
-
-// CREATE
-export const criarProduto = async (produto) => {
-  const resposta = await fetch(API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(produto),
-  });
-  return resposta.json();
-};
-
-// UPDATE
-export const atualizarProduto = async (id, produtoAtualizado) => {
-  const resposta = await fetch(`${API_URL}/${id}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(produtoAtualizado),
-  });
-  return resposta.json();
-};
-
-// DELETE
-export const deletarProduto = async (id) => {
-  const resposta = await fetch(`${API_URL}/${id}`, {
-    method: 'DELETE',
-  });
-  return resposta.json();
-};
+const API_URL = '/api/produtos';export const buscarProdutos = async () => {  const resposta = await fetch(API_URL);  return resposta.json();};export const criarProduto = async (produto) => {  const resposta = await fetch(API_URL, {    method: 'POST',    headers: {      'Content-Type': 'application/json',    },    body: JSON.stringify(produto),  });  return resposta.json();};export const atualizarProduto = async (id, produtoAtualizado) => {  const resposta = await fetch(`${API_URL}/${id}`, {    method: 'PATCH',    headers: {      'Content-Type': 'application/json',    },    body: JSON.stringify(produtoAtualizado),  });  return resposta.json();};export const deletarProduto = async (id) => {  const resposta = await fetch(`${API_URL}/${id}`, {    method: 'DELETE',  });  return resposta.json();};

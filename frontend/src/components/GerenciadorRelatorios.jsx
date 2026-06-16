@@ -1,551 +1,1 @@
-import React, { useState, useCallback } from 'react';
-import { RelatorioServico } from '../servicos/RelatorioServico';
-import './GerenciadorRelatorios.css';
-
-/* ==============================
-   CONFIGURAÇÕES DO COMPONENTE
-   ============================== */
-const servicoRelatorio = new RelatorioServico();
-
-/** Data padrão: primeiro dia do mês corrente */
-const obterDataInicioMes = () => {
-  const hoje = new Date();
-  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`;
-};
-
-/** Data padrão: hoje */
-const obterHoje = () => {
-  const hoje = new Date();
-  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
-};
-
-/** Catálogo dos tipos de relatório disponíveis */
-const TIPOS_RELATORIO = [
-  {
-    id: 'reservas',
-    nome: 'Reservas',
-    descricao: 'Todas as reservas do período',
-    cor: '#2196f3',
-    icone: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>
-      </svg>
-    )
-  },
-  {
-    id: 'pedidos',
-    nome: 'Pedidos',
-    descricao: 'Todos os pedidos do período',
-    cor: '#ff6e35',
-    icone: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>
-        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
-      </svg>
-    )
-  },
-  {
-    id: 'faturamento',
-    nome: 'Faturamento',
-    descricao: 'Receita por dia (pedidos entregues)',
-    cor: '#9c27b0',
-    icone: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-      </svg>
-    )
-  },
-  {
-    id: 'ocupacao',
-    nome: 'Ocupação de Mesas',
-    descricao: 'Uso e demanda por mesa',
-    cor: '#4caf50',
-    icone: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 18v3"/><path d="M20 18v3"/><path d="M19 14v4"/><path d="M5 14v4"/>
-        <path d="M3 8h18v6H3z"/>
-      </svg>
-    )
-  }
-];
-
-/* ============================================================
-   SUB-COMPONENTES
-   ============================================================ */
-
-/**
- * @function CardKpi
- * @description Cartão de KPI do sumário do relatório gerado.
- * @param {{ icone: React.ReactNode, rotulo: string, valor: string|number, subtitulo: string, cor: string }} props
- */
-function CardKpi({ icone, rotulo, valor, subtitulo, cor }) {
-  return (
-    <div className="relatorio-kpi-card">
-      <div className="relatorio-kpi-icone" style={{ background: `${cor}15`, color: cor }}>
-        {icone}
-      </div>
-      <div className="relatorio-kpi-dados">
-        <span className="relatorio-kpi-label">{rotulo}</span>
-        <span className="relatorio-kpi-valor">{valor}</span>
-        {subtitulo && <span className="relatorio-kpi-subtitulo">{subtitulo}</span>}
-      </div>
-    </div>
-  );
-}
-
-/**
- * @function CardTipoRelatorio
- * @description Card clicável para seleção do tipo de relatório.
- * @param {{ tipo: Object, selecionado: boolean, onClick: Function }} props
- */
-function CardTipoRelatorio({ tipo, selecionado, onClick }) {
-  return (
-    <button
-      type="button"
-      id={`tipo-relatorio-${tipo.id}`}
-      className={`relatorio-tipo-card ${selecionado ? 'selecionado' : ''}`}
-      onClick={() => onClick(tipo.id)}
-    >
-      <div className="relatorio-tipo-icone-wrapper" style={{ background: `${tipo.cor}15`, color: tipo.cor }}>
-        {tipo.icone}
-      </div>
-      <div className="relatorio-tipo-info">
-        <span className="relatorio-tipo-nome">{tipo.nome}</span>
-        <span className="relatorio-tipo-desc">{tipo.descricao}</span>
-      </div>
-    </button>
-  );
-}
-
-/**
- * @function TabelaResultados
- * @description Renderiza a tabela de dados do relatório gerado de forma genérica.
- * Funciona para qualquer objeto com chaves homogêneas.
- * @param {{ dados: Array<Object> }} props
- */
-function TabelaResultados({ dados }) {
-  if (!dados || dados.length === 0) return null;
-
-  const colunas = Object.keys(dados[0]);
-
-  /**
-   * Determina a classe CSS do badge baseado no valor de status.
-   * @param {string} coluna - Nome da coluna.
-   * @param {string} valor - Valor da célula.
-   * @returns {string|null} Nome da classe CSS ou null.
-   */
-  const obterClasseBadge = (coluna, valor) => {
-    if (coluna !== 'Status') return null;
-    return valor?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') || null;
-  };
-
-  return (
-    <div className="relatorios-tabela-container">
-      <table className="relatorios-tabela" aria-label="Tabela de resultados do relatório">
-        <thead>
-          <tr>
-            {colunas.map(coluna => (
-              <th key={coluna}>{coluna}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {dados.map((linha, indiceLinha) => (
-            <tr key={indiceLinha}>
-              {colunas.map(coluna => {
-                const valor = linha[coluna];
-                const ehId = coluna === 'Código';
-                const classeBadge = obterClasseBadge(coluna, valor);
-
-                return (
-                  <td key={coluna}>
-                    {ehId ? (
-                      <span className="relatorio-id-cell">{valor}</span>
-                    ) : classeBadge ? (
-                      <span className={`relatorio-badge ${classeBadge}`}>{valor}</span>
-                    ) : (
-                      valor ?? '—'
-                    )}
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-/* ============================================================
-   COMPONENTE PRINCIPAL
-   ============================================================ */
-
-/**
- * @function GerenciadorRelatorios
- * @description Componente de geração de relatórios detalhados do restaurante.
- * Permite selecionar o tipo de relatório (Reservas, Pedidos, Faturamento, Ocupação de Mesas),
- * filtrar por período e exportar os dados em formato CSV.
- * @returns {React.JSX.Element}
- */
-function GerenciadorRelatorios() {
-  // --- Estado da configuração do relatório ---
-  const [tipoSelecionado, setTipoSelecionado] = useState('reservas');
-  const [dataInicio, setDataInicio] = useState(obterDataInicioMes);
-  const [dataFim, setDataFim] = useState(obterHoje);
-
-  // --- Estado dos resultados ---
-  const [dadosRelatorio, setDadosRelatorio] = useState(null);
-  const [sumario, setSumario] = useState(null);
-  const [estadoGerador, setEstadoGerador] = useState('inicial'); // 'inicial' | 'carregando' | 'pronto' | 'vazio'
-  const [feedback, setFeedback] = useState(null);
-
-  /**
-   * Exibe uma mensagem de feedback temporária.
-   * @param {string} mensagem
-   * @param {'sucesso'|'erro'} tipo
-   */
-  const exibirFeedback = useCallback((mensagem, tipo = 'sucesso') => {
-    setFeedback({ mensagem, tipo });
-    setTimeout(() => setFeedback(null), 3500);
-  }, []);
-
-  /**
-   * Calcula o sumário de KPIs para o tipo de relatório e dados fornecidos.
-   * @param {string} tipo - Tipo do relatório.
-   * @param {Array<Object>} dados - Dados formatados do relatório.
-   * @param {Array<Object>} dadosBrutos - Dados originais antes da formatação.
-   * @returns {Array<Object>} Lista de KPIs a exibir.
-   */
-  const calcularSumario = (tipo, dados, dadosBrutos) => {
-    switch (tipo) {
-      case 'reservas': {
-        const confirmadas = dadosBrutos.filter(r => r.status === 'Confirmada' || r.status === 'Ocupada').length;
-        const canceladas = dadosBrutos.filter(r => r.status === 'Cancelada').length;
-        const totalPessoas = dadosBrutos.reduce((s, r) => s + (r.quantidadePessoas ?? 0), 0);
-        return [
-          { rotulo: 'Total de Reservas', valor: dados.length, cor: '#2196f3', subtitulo: 'no período' },
-          { rotulo: 'Confirmadas', valor: confirmadas, cor: '#4caf50', subtitulo: 'e ocupadas' },
-          { rotulo: 'Canceladas', valor: canceladas, cor: '#e53e3e', subtitulo: 'no período' },
-          { rotulo: 'Total de Pessoas', valor: totalPessoas, cor: '#9c27b0', subtitulo: 'atendidas' }
-        ];
-      }
-      case 'pedidos': {
-        const totalFaturado = dadosBrutos
-          .filter(p => p.status === 'Entregue')
-          .reduce((s, p) => s + (p.valorTotal ?? 0), 0);
-        const cancelados = dadosBrutos.filter(p => p.status === 'Cancelado').length;
-        return [
-          { rotulo: 'Total de Pedidos', valor: dados.length, cor: '#ff6e35', subtitulo: 'no período' },
-          { rotulo: 'Entregues', valor: dadosBrutos.filter(p => p.status === 'Entregue').length, cor: '#4caf50', subtitulo: 'concluídos' },
-          { rotulo: 'Cancelados', valor: cancelados, cor: '#e53e3e', subtitulo: 'no período' },
-          {
-            rotulo: 'Faturamento', valor: `R$ ${totalFaturado.toFixed(2).replace('.', ',')}`, cor: '#9c27b0',
-            subtitulo: 'pedidos entregues'
-          }
-        ];
-      }
-      case 'faturamento': {
-        const totalGeral = dadosBrutos
-          .filter(p => p.status === 'Entregue')
-          .reduce((s, p) => s + (p.valorTotal ?? 0), 0);
-        const ticketMedio = dados.length > 0 ? totalGeral / dados.length : 0;
-        return [
-          { rotulo: 'Dias com Movimento', valor: dados.length, cor: '#9c27b0', subtitulo: 'no período' },
-          { rotulo: 'Faturamento Total', valor: `R$ ${totalGeral.toFixed(2).replace('.', ',')}`, cor: '#4caf50', subtitulo: 'pedidos entregues' },
-          { rotulo: 'Ticket Médio por Dia', valor: `R$ ${ticketMedio.toFixed(2).replace('.', ',')}`, cor: '#ff6e35', subtitulo: 'média diária' }
-        ];
-      }
-      case 'ocupacao': {
-        const mesaMaisUsada = dados.length > 0
-          ? dados.reduce((max, atual) =>
-              parseInt(atual['Total de Reservas']) > parseInt(max['Total de Reservas']) ? atual : max
-            )
-          : null;
-        const totalReservas = dadosBrutos.length;
-        return [
-          { rotulo: 'Mesas no Relatório', valor: dados.length, cor: '#4caf50', subtitulo: 'com reservas' },
-          { rotulo: 'Total de Reservas', valor: totalReservas, cor: '#2196f3', subtitulo: 'no período' },
-          {
-            rotulo: 'Mesa Mais Solicitada', valor: mesaMaisUsada?.['Mesa'] ?? '—', cor: '#ff6e35',
-            subtitulo: mesaMaisUsada ? `${mesaMaisUsada['Total de Reservas']} reservas` : ''
-          }
-        ];
-      }
-      default:
-        return [];
-    }
-  };
-
-  /**
-   * Executa a geração do relatório buscando dados, filtrando por período e formatando.
-   */
-  const handleGerarRelatorio = useCallback(async () => {
-    if (!dataInicio || !dataFim) {
-      exibirFeedback('Selecione o período de início e fim do relatório.', 'erro');
-      return;
-    }
-    if (new Date(dataInicio) > new Date(dataFim)) {
-      exibirFeedback('A data de início não pode ser posterior à data de fim.', 'erro');
-      return;
-    }
-
-    setEstadoGerador('carregando');
-    setDadosRelatorio(null);
-    setSumario(null);
-
-    try {
-      let dadosBrutos = [];
-      let dadosFormatados = [];
-
-      // PORQUÊ: Cada tipo de relatório busca sua própria fonte de dados e aplica formatação específica.
-      switch (tipoSelecionado) {
-        case 'reservas': {
-          const reservas = await servicoRelatorio.buscarReservas();
-          dadosBrutos = servicoRelatorio.filtrarPorPeriodo(reservas, 'dataHora', dataInicio, dataFim);
-          dadosFormatados = servicoRelatorio.formatarRelatorioReservas(dadosBrutos);
-          break;
-        }
-        case 'pedidos': {
-          const pedidos = await servicoRelatorio.buscarPedidos();
-          dadosBrutos = servicoRelatorio.filtrarPorPeriodo(pedidos, 'dataAbertura', dataInicio, dataFim);
-          dadosFormatados = servicoRelatorio.formatarRelatorioPedidos(dadosBrutos);
-          break;
-        }
-        case 'faturamento': {
-          const pedidos = await servicoRelatorio.buscarPedidos();
-          dadosBrutos = servicoRelatorio.filtrarPorPeriodo(pedidos, 'dataAbertura', dataInicio, dataFim);
-          dadosFormatados = servicoRelatorio.formatarRelatorioFaturamento(dadosBrutos);
-          break;
-        }
-        case 'ocupacao': {
-          const reservas = await servicoRelatorio.buscarReservas();
-          dadosBrutos = servicoRelatorio.filtrarPorPeriodo(reservas, 'dataHora', dataInicio, dataFim);
-          dadosFormatados = servicoRelatorio.formatarRelatorioOcupacao(dadosBrutos);
-          break;
-        }
-        default:
-          break;
-      }
-
-      const kpis = calcularSumario(tipoSelecionado, dadosFormatados, dadosBrutos);
-      setSumario(kpis);
-      setDadosRelatorio(dadosFormatados);
-      setEstadoGerador(dadosFormatados.length > 0 ? 'pronto' : 'vazio');
-    } catch (erro) {
-      console.error('[GerenciadorRelatorios] Erro ao gerar relatório:', erro);
-      setEstadoGerador('inicial');
-      exibirFeedback('Erro ao buscar dados. Verifique a conexão com o servidor.', 'erro');
-    }
-  }, [tipoSelecionado, dataInicio, dataFim, exibirFeedback]);
-
-  /**
-   * Exporta os dados atuais do relatório em formato CSV e dispara o download.
-   */
-  const handleExportarCsv = useCallback(() => {
-    if (!dadosRelatorio || dadosRelatorio.length === 0) return;
-
-    const tipoConfig = TIPOS_RELATORIO.find(t => t.id === tipoSelecionado);
-    const nomeArquivo = `relatorio_${tipoSelecionado}_${dataInicio}_a_${dataFim}`;
-
-    try {
-      const conteudoCsv = servicoRelatorio.converterParaCsv(dadosRelatorio);
-      servicoRelatorio.baixarCsv(conteudoCsv, nomeArquivo);
-      exibirFeedback(`Relatório de ${tipoConfig?.nome} exportado em CSV com sucesso!`);
-    } catch (erro) {
-      console.error('[GerenciadorRelatorios] Erro ao exportar CSV:', erro);
-      exibirFeedback('Erro ao gerar o arquivo CSV. Tente novamente.', 'erro');
-    }
-  }, [dadosRelatorio, tipoSelecionado, dataInicio, dataFim, exibirFeedback]);
-
-  // --- Cálculo do título do relatório gerado ---
-  const tipoAtual = TIPOS_RELATORIO.find(t => t.id === tipoSelecionado);
-  const periodoFormatado = dataInicio && dataFim
-    ? `${new Date(dataInicio + 'T00:00').toLocaleDateString('pt-BR')} — ${new Date(dataFim + 'T00:00').toLocaleDateString('pt-BR')}`
-    : '';
-
-  // --- Renderização ---
-  return (
-    <div className="gerenciador-relatorios">
-
-      {/* Feedback global */}
-      {feedback && (
-        <div className={`relatorio-feedback ${feedback.tipo}`} role="status" aria-live="polite">
-          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            {feedback.tipo === 'sucesso'
-              ? <polyline points="20 6 9 17 4 12"/>
-              : <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>
-            }
-          </svg>
-          {feedback.mensagem}
-        </div>
-      )}
-
-      {/* === PAINEL DE CONFIGURAÇÃO === */}
-      <section className="relatorios-painel-config" aria-label="Configuração do relatório">
-        <div className="relatorios-config-cabecalho">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
-          </svg>
-          <h2>Configurar Relatório</h2>
-          <p>Selecione o tipo e o período para gerar</p>
-        </div>
-
-        <div className="relatorios-config-corpo">
-          {/* Cards de seleção do tipo */}
-          <div className="relatorios-tipos-grid" role="radiogroup" aria-label="Tipo de relatório">
-            {TIPOS_RELATORIO.map(tipo => (
-              <CardTipoRelatorio
-                key={tipo.id}
-                tipo={tipo}
-                selecionado={tipoSelecionado === tipo.id}
-                onClick={setTipoSelecionado}
-              />
-            ))}
-          </div>
-
-          {/* Filtros de período e botão */}
-          <div className="relatorios-config-grade">
-            <div className="relatorio-campo-grupo">
-              <label htmlFor="relatorio-data-inicio">Data de Início</label>
-              <input
-                id="relatorio-data-inicio"
-                type="date"
-                value={dataInicio}
-                onChange={e => setDataInicio(e.target.value)}
-                max={dataFim}
-              />
-            </div>
-
-            <div className="relatorio-campo-grupo">
-              <label htmlFor="relatorio-data-fim">Data de Fim</label>
-              <input
-                id="relatorio-data-fim"
-                type="date"
-                value={dataFim}
-                onChange={e => setDataFim(e.target.value)}
-                min={dataInicio}
-                max={obterHoje()}
-              />
-            </div>
-
-            <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'flex-end' }}>
-              <button
-                id="btn-gerar-relatorio"
-                className="btn-gerar-relatorio"
-                onClick={handleGerarRelatorio}
-                disabled={estadoGerador === 'carregando'}
-                style={{ width: '100%' }}
-              >
-                {estadoGerador === 'carregando' ? (
-                  <>
-                    <div className="spinner-relatorio" style={{ width: 16, height: 16, borderWidth: 2 }} />
-                    Gerando...
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
-                    </svg>
-                    Gerar Relatório
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* === SUMÁRIO DE KPIs === */}
-      {sumario && sumario.length > 0 && (
-        <section className="relatorios-sumario" aria-label="Sumário do relatório">
-          {sumario.map((kpi, indice) => (
-            <CardKpi
-              key={indice}
-              icone={tipoAtual?.icone}
-              rotulo={kpi.rotulo}
-              valor={kpi.valor}
-              subtitulo={kpi.subtitulo}
-              cor={kpi.cor}
-            />
-          ))}
-        </section>
-      )}
-
-      {/* === PAINEL DE RESULTADOS === */}
-      <section className="relatorios-resultado" aria-label="Resultados do relatório">
-        <div className="relatorios-resultado-cabecalho">
-          <div className="relatorios-resultado-titulo">
-            <h3>
-              {estadoGerador === 'inicial'
-                ? 'Resultados do Relatório'
-                : `${tipoAtual?.nome}`}
-            </h3>
-            {periodoFormatado && estadoGerador !== 'inicial' && (
-              <span>Período: {periodoFormatado}</span>
-            )}
-          </div>
-
-          <div className="relatorios-acoes-exportacao">
-            {dadosRelatorio && dadosRelatorio.length > 0 && (
-              <span className="relatorios-contagem">
-                {dadosRelatorio.length} registro{dadosRelatorio.length !== 1 ? 's' : ''}
-              </span>
-            )}
-
-            <button
-              id="btn-exportar-csv"
-              className="btn-exportar csv"
-              onClick={handleExportarCsv}
-              disabled={!dadosRelatorio || dadosRelatorio.length === 0}
-              title="Exportar como CSV"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              Exportar CSV
-            </button>
-          </div>
-        </div>
-
-        {/* Conteúdo principal da seção de resultados */}
-        {estadoGerador === 'inicial' && (
-          <div className="relatorios-estado-inicial">
-            <div className="relatorios-estado-inicial-icone">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
-              </svg>
-            </div>
-            <h4>Nenhum relatório gerado</h4>
-            <p>Selecione um tipo de relatório e o período desejado<br/>e clique em "Gerar Relatório" para visualizar os dados.</p>
-          </div>
-        )}
-
-        {estadoGerador === 'carregando' && (
-          <div className="relatorios-estado-carregando">
-            <div className="spinner-relatorio" />
-            <p>Buscando e processando dados...</p>
-          </div>
-        )}
-
-        {estadoGerador === 'vazio' && (
-          <div className="relatorios-estado-vazio">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/>
-              <line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
-            </svg>
-            <p>Nenhum dado encontrado para o período selecionado.</p>
-          </div>
-        )}
-
-        {estadoGerador === 'pronto' && dadosRelatorio && (
-          <TabelaResultados dados={dadosRelatorio} />
-        )}
-      </section>
-    </div>
-  );
-}
-
-export default GerenciadorRelatorios;
+import React, { useState, useCallback } from 'react';import { RelatorioServico } from '../servicos/RelatorioServico';import './GerenciadorRelatorios.css';const servicoRelatorio = new RelatorioServico();const obterDataInicioMes = () => {  const hoje = new Date();  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`;};const obterHoje = () => {  const hoje = new Date();  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;};const TIPOS_RELATORIO = [  {    id: 'reservas',    nome: 'Reservas',    descricao: 'Todas as reservas do período',    cor: '#2196f3',    icone: (      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">        <path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>      </svg>    )  },  {    id: 'pedidos',    nome: 'Pedidos',    descricao: 'Todos os pedidos do período',    cor: '#ff6e35',    icone: (      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">        <circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/>        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>      </svg>    )  },  {    id: 'faturamento',    nome: 'Faturamento',    descricao: 'Receita por dia (pedidos entregues)',    cor: '#9c27b0',    icone: (      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">        <line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>      </svg>    )  },  {    id: 'ocupacao',    nome: 'Ocupação de Mesas',    descricao: 'Uso e demanda por mesa',    cor: '#4caf50',    icone: (      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">        <path d="M4 18v3"/><path d="M20 18v3"/><path d="M19 14v4"/><path d="M5 14v4"/>        <path d="M3 8h18v6H3z"/>      </svg>    )  }];function CardKpi({ icone, rotulo, valor, subtitulo, cor }) {  return (    <div className="relatorio-kpi-card">      <div className="relatorio-kpi-icone" style={{ background: `${cor}15`, color: cor }}>        {icone}      </div>      <div className="relatorio-kpi-dados">        <span className="relatorio-kpi-label">{rotulo}</span>        <span className="relatorio-kpi-valor">{valor}</span>        {subtitulo && <span className="relatorio-kpi-subtitulo">{subtitulo}</span>}      </div>    </div>  );}function CardTipoRelatorio({ tipo, selecionado, onClick }) {  return (    <button      type="button"      id={`tipo-relatorio-${tipo.id}`}      className={`relatorio-tipo-card ${selecionado ? 'selecionado' : ''}`}      onClick={() => onClick(tipo.id)}    >      <div className="relatorio-tipo-icone-wrapper" style={{ background: `${tipo.cor}15`, color: tipo.cor }}>        {tipo.icone}      </div>      <div className="relatorio-tipo-info">        <span className="relatorio-tipo-nome">{tipo.nome}</span>        <span className="relatorio-tipo-desc">{tipo.descricao}</span>      </div>    </button>  );}function TabelaResultados({ dados }) {  if (!dados || dados.length === 0) return null;  const colunas = Object.keys(dados[0]);  const obterClasseBadge = (coluna, valor) => {    if (coluna !== 'Status') return null;    return valor?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') || null;  };  return (    <div className="relatorios-tabela-container">      <table className="relatorios-tabela" aria-label="Tabela de resultados do relatório">        <thead>          <tr>            {colunas.map(coluna => (              <th key={coluna}>{coluna}</th>            ))}          </tr>        </thead>        <tbody>          {dados.map((linha, indiceLinha) => (            <tr key={indiceLinha}>              {colunas.map(coluna => {                const valor = linha[coluna];                const ehId = coluna === 'Código';                const classeBadge = obterClasseBadge(coluna, valor);                return (                  <td key={coluna}>                    {ehId ? (                      <span className="relatorio-id-cell">{valor}</span>                    ) : classeBadge ? (                      <span className={`relatorio-badge ${classeBadge}`}>{valor}</span>                    ) : (                      valor ?? '—'                    )}                  </td>                );              })}            </tr>          ))}        </tbody>      </table>    </div>  );}function GerenciadorRelatorios() {  const [tipoSelecionado, setTipoSelecionado] = useState('reservas');  const [dataInicio, setDataInicio] = useState(obterDataInicioMes);  const [dataFim, setDataFim] = useState(obterHoje);  const [dadosRelatorio, setDadosRelatorio] = useState(null);  const [sumario, setSumario] = useState(null);  const [estadoGerador, setEstadoGerador] = useState('inicial');   const [feedback, setFeedback] = useState(null);  const exibirFeedback = useCallback((mensagem, tipo = 'sucesso') => {    setFeedback({ mensagem, tipo });    setTimeout(() => setFeedback(null), 3500);  }, []);  const calcularSumario = (tipo, dados, dadosBrutos) => {    switch (tipo) {      case 'reservas': {        const confirmadas = dadosBrutos.filter(r => r.status === 'Confirmada' || r.status === 'Ocupada').length;        const canceladas = dadosBrutos.filter(r => r.status === 'Cancelada').length;        const totalPessoas = dadosBrutos.reduce((s, r) => s + (r.quantidadePessoas ?? 0), 0);        return [          { rotulo: 'Total de Reservas', valor: dados.length, cor: '#2196f3', subtitulo: 'no período' },          { rotulo: 'Confirmadas', valor: confirmadas, cor: '#4caf50', subtitulo: 'e ocupadas' },          { rotulo: 'Canceladas', valor: canceladas, cor: '#e53e3e', subtitulo: 'no período' },          { rotulo: 'Total de Pessoas', valor: totalPessoas, cor: '#9c27b0', subtitulo: 'atendidas' }        ];      }      case 'pedidos': {        const totalFaturado = dadosBrutos          .filter(p => p.status === 'Entregue')          .reduce((s, p) => s + (p.valorTotal ?? 0), 0);        const cancelados = dadosBrutos.filter(p => p.status === 'Cancelado').length;        return [          { rotulo: 'Total de Pedidos', valor: dados.length, cor: '#ff6e35', subtitulo: 'no período' },          { rotulo: 'Entregues', valor: dadosBrutos.filter(p => p.status === 'Entregue').length, cor: '#4caf50', subtitulo: 'concluídos' },          { rotulo: 'Cancelados', valor: cancelados, cor: '#e53e3e', subtitulo: 'no período' },          {            rotulo: 'Faturamento', valor: `R$ ${totalFaturado.toFixed(2).replace('.', ',')}`, cor: '#9c27b0',            subtitulo: 'pedidos entregues'          }        ];      }      case 'faturamento': {        const totalGeral = dadosBrutos          .filter(p => p.status === 'Entregue')          .reduce((s, p) => s + (p.valorTotal ?? 0), 0);        const ticketMedio = dados.length > 0 ? totalGeral / dados.length : 0;        return [          { rotulo: 'Dias com Movimento', valor: dados.length, cor: '#9c27b0', subtitulo: 'no período' },          { rotulo: 'Faturamento Total', valor: `R$ ${totalGeral.toFixed(2).replace('.', ',')}`, cor: '#4caf50', subtitulo: 'pedidos entregues' },          { rotulo: 'Ticket Médio por Dia', valor: `R$ ${ticketMedio.toFixed(2).replace('.', ',')}`, cor: '#ff6e35', subtitulo: 'média diária' }        ];      }      case 'ocupacao': {        const mesaMaisUsada = dados.length > 0          ? dados.reduce((max, atual) =>              parseInt(atual['Total de Reservas']) > parseInt(max['Total de Reservas']) ? atual : max            )          : null;        const totalReservas = dadosBrutos.length;        return [          { rotulo: 'Mesas no Relatório', valor: dados.length, cor: '#4caf50', subtitulo: 'com reservas' },          { rotulo: 'Total de Reservas', valor: totalReservas, cor: '#2196f3', subtitulo: 'no período' },          {            rotulo: 'Mesa Mais Solicitada', valor: mesaMaisUsada?.['Mesa'] ?? '—', cor: '#ff6e35',            subtitulo: mesaMaisUsada ? `${mesaMaisUsada['Total de Reservas']} reservas` : ''          }        ];      }      default:        return [];    }  };  const handleGerarRelatorio = useCallback(async () => {    if (!dataInicio || !dataFim) {      exibirFeedback('Selecione o período de início e fim do relatório.', 'erro');      return;    }    if (new Date(dataInicio) > new Date(dataFim)) {      exibirFeedback('A data de início não pode ser posterior à data de fim.', 'erro');      return;    }    setEstadoGerador('carregando');    setDadosRelatorio(null);    setSumario(null);    try {      let dadosBrutos = [];      let dadosFormatados = [];      switch (tipoSelecionado) {        case 'reservas': {          const reservas = await servicoRelatorio.buscarReservas();          dadosBrutos = servicoRelatorio.filtrarPorPeriodo(reservas, 'dataHora', dataInicio, dataFim);          dadosFormatados = servicoRelatorio.formatarRelatorioReservas(dadosBrutos);          break;        }        case 'pedidos': {          const pedidos = await servicoRelatorio.buscarPedidos();          dadosBrutos = servicoRelatorio.filtrarPorPeriodo(pedidos, 'dataAbertura', dataInicio, dataFim);          dadosFormatados = servicoRelatorio.formatarRelatorioPedidos(dadosBrutos);          break;        }        case 'faturamento': {          const pedidos = await servicoRelatorio.buscarPedidos();          dadosBrutos = servicoRelatorio.filtrarPorPeriodo(pedidos, 'dataAbertura', dataInicio, dataFim);          dadosFormatados = servicoRelatorio.formatarRelatorioFaturamento(dadosBrutos);          break;        }        case 'ocupacao': {          const reservas = await servicoRelatorio.buscarReservas();          dadosBrutos = servicoRelatorio.filtrarPorPeriodo(reservas, 'dataHora', dataInicio, dataFim);          dadosFormatados = servicoRelatorio.formatarRelatorioOcupacao(dadosBrutos);          break;        }        default:          break;      }      const kpis = calcularSumario(tipoSelecionado, dadosFormatados, dadosBrutos);      setSumario(kpis);      setDadosRelatorio(dadosFormatados);      setEstadoGerador(dadosFormatados.length > 0 ? 'pronto' : 'vazio');    } catch (erro) {      console.error('[GerenciadorRelatorios] Erro ao gerar relatório:', erro);      setEstadoGerador('inicial');      exibirFeedback('Erro ao buscar dados. Verifique a conexão com o servidor.', 'erro');    }  }, [tipoSelecionado, dataInicio, dataFim, exibirFeedback]);  const handleExportarCsv = useCallback(() => {    if (!dadosRelatorio || dadosRelatorio.length === 0) return;    const tipoConfig = TIPOS_RELATORIO.find(t => t.id === tipoSelecionado);    const nomeArquivo = `relatorio_${tipoSelecionado}_${dataInicio}_a_${dataFim}`;    try {      const conteudoCsv = servicoRelatorio.converterParaCsv(dadosRelatorio);      servicoRelatorio.baixarCsv(conteudoCsv, nomeArquivo);      exibirFeedback(`Relatório de ${tipoConfig?.nome} exportado em CSV com sucesso!`);    } catch (erro) {      console.error('[GerenciadorRelatorios] Erro ao exportar CSV:', erro);      exibirFeedback('Erro ao gerar o arquivo CSV. Tente novamente.', 'erro');    }  }, [dadosRelatorio, tipoSelecionado, dataInicio, dataFim, exibirFeedback]);  const tipoAtual = TIPOS_RELATORIO.find(t => t.id === tipoSelecionado);  const periodoFormatado = dataInicio && dataFim    ? `${new Date(dataInicio + 'T00:00').toLocaleDateString('pt-BR')} — ${new Date(dataFim + 'T00:00').toLocaleDateString('pt-BR')}`    : '';  return (    <div className="gerenciador-relatorios">      {}      {feedback && (        <div className={`relatorio-feedback ${feedback.tipo}`} role="status" aria-live="polite">          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">            {feedback.tipo === 'sucesso'              ? <polyline points="20 6 9 17 4 12"/>              : <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>            }          </svg>          {feedback.mensagem}        </div>      )}      {}      <section className="relatorios-painel-config" aria-label="Configuração do relatório">        <div className="relatorios-config-cabecalho">          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">            <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>          </svg>          <h2>Configurar Relatório</h2>          <p>Selecione o tipo e o período para gerar</p>        </div>        <div className="relatorios-config-corpo">          {}          <div className="relatorios-tipos-grid" role="radiogroup" aria-label="Tipo de relatório">            {TIPOS_RELATORIO.map(tipo => (              <CardTipoRelatorio                key={tipo.id}                tipo={tipo}                selecionado={tipoSelecionado === tipo.id}                onClick={setTipoSelecionado}              />            ))}          </div>          {}          <div className="relatorios-config-grade">            <div className="relatorio-campo-grupo">              <label htmlFor="relatorio-data-inicio">Data de Início</label>              <input                id="relatorio-data-inicio"                type="date"                value={dataInicio}                onChange={e => setDataInicio(e.target.value)}                max={dataFim}              />            </div>            <div className="relatorio-campo-grupo">              <label htmlFor="relatorio-data-fim">Data de Fim</label>              <input                id="relatorio-data-fim"                type="date"                value={dataFim}                onChange={e => setDataFim(e.target.value)}                min={dataInicio}                max={obterHoje()}              />            </div>            <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'flex-end' }}>              <button                id="btn-gerar-relatorio"                className="btn-gerar-relatorio"                onClick={handleGerarRelatorio}                disabled={estadoGerador === 'carregando'}                style={{ width: '100%' }}              >                {estadoGerador === 'carregando' ? (                  <>                    <div className="spinner-relatorio" style={{ width: 16, height: 16, borderWidth: 2 }} />                    Gerando...                  </>                ) : (                  <>                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">                      <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>                    </svg>                    Gerar Relatório                  </>                )}              </button>            </div>          </div>        </div>      </section>      {}      {sumario && sumario.length > 0 && (        <section className="relatorios-sumario" aria-label="Sumário do relatório">          {sumario.map((kpi, indice) => (            <CardKpi              key={indice}              icone={tipoAtual?.icone}              rotulo={kpi.rotulo}              valor={kpi.valor}              subtitulo={kpi.subtitulo}              cor={kpi.cor}            />          ))}        </section>      )}      {}      <section className="relatorios-resultado" aria-label="Resultados do relatório">        <div className="relatorios-resultado-cabecalho">          <div className="relatorios-resultado-titulo">            <h3>              {estadoGerador === 'inicial'                ? 'Resultados do Relatório'                : `${tipoAtual?.nome}`}            </h3>            {periodoFormatado && estadoGerador !== 'inicial' && (              <span>Período: {periodoFormatado}</span>            )}          </div>          <div className="relatorios-acoes-exportacao">            {dadosRelatorio && dadosRelatorio.length > 0 && (              <span className="relatorios-contagem">                {dadosRelatorio.length} registro{dadosRelatorio.length !== 1 ? 's' : ''}              </span>            )}            <button              id="btn-exportar-csv"              className="btn-exportar csv"              onClick={handleExportarCsv}              disabled={!dadosRelatorio || dadosRelatorio.length === 0}              title="Exportar como CSV"            >              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>                <polyline points="7 10 12 15 17 10"/>                <line x1="12" y1="15" x2="12" y2="3"/>              </svg>              Exportar CSV            </button>          </div>        </div>        {}        {estadoGerador === 'inicial' && (          <div className="relatorios-estado-inicial">            <div className="relatorios-estado-inicial-icone">              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">                <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>              </svg>            </div>            <h4>Nenhum relatório gerado</h4>            <p>Selecione um tipo de relatório e o período desejado<br/>e clique em "Gerar Relatório" para visualizar os dados.</p>          </div>        )}        {estadoGerador === 'carregando' && (          <div className="relatorios-estado-carregando">            <div className="spinner-relatorio" />            <p>Buscando e processando dados...</p>          </div>        )}        {estadoGerador === 'vazio' && (          <div className="relatorios-estado-vazio">            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">              <circle cx="12" cy="12" r="10"/><line x1="8" y1="15" x2="16" y2="15"/>              <line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>            </svg>            <p>Nenhum dado encontrado para o período selecionado.</p>          </div>        )}        {estadoGerador === 'pronto' && dadosRelatorio && (          <TabelaResultados dados={dadosRelatorio} />        )}      </section>    </div>  );}export default GerenciadorRelatorios;

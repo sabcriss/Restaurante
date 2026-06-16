@@ -1,168 +1,1 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100vw;
-  height: 100vh;
-  background-color: #ff6e35; 
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-
-.login-card {
-  background: #ffffff;
-  padding: 30px 35px;
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  width: 100%;
-  max-width: 420px;
-  text-align: center;
-}
-
-.sistema-logo {
-  width: 100%;
-  max-width: 160px;
-  height: auto;
-  margin: 0 auto 10px auto;
-  display: block;
-}
-
-.subtitle {
-  color: #666;
-  font-size: 14px;
-  margin-bottom: 25px;
-}
-
-.input-group {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  margin-bottom: 15px; 
-  width: 100%;
-}
-
-.input-group label {
-  display: block;
-  font-size: 14px;
-  color: #333;
-  margin-bottom: 5px;
-  font-weight: bold;
-}
-
-.input-group input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 15px;
-  color: #333;
-  background-color: #ffffff;
-  transition: border-color 0.2s;
-}
-
-.input-group input:focus {
-  border-color: #ff6e35;
-  outline: none;
-}
-
-.login-button {
-  width: 100%;
-  padding: 14px;
-  background-color: #ff6e35;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 15px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  text-transform: uppercase;
-  margin-top: 10px;
-}
-
-.login-button:hover {
-  background-color: #e55b24;
-}
-
-.test-credentials {
-  margin-top: 20px;
-  color: #888;
-  font-size: 12px;
-}
-
-/* ==============================
-   APRESENTAÇÃO DA LOGO PREMIUM
-   ============================== */
-.logo-premium {
-  border-radius: 12px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  filter: drop-shadow(0 6px 12px rgba(255, 110, 53, 0.18));
-  transition: all 0.3s ease;
-  display: block;
-}
-
-.logo-premium:hover {
-  transform: scale(1.05) rotate(1deg);
-  filter: drop-shadow(0 10px 20px rgba(255, 110, 53, 0.28));
-  background: #ffffff;
-}
-
-/* Container de Reservas Públicas (semelhante ao login-container) */
-.reservas-publicas-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100vw;
-  min-height: 100vh;
-  background-color: #ff6e35; 
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  padding: 40px 20px;
-  overflow-y: auto;
-}
-
-/* Card centralizado e mais largo que o login-card */
-.reservas-publicas-card {
-  background: #ffffff;
-  padding: 35px 40px;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  width: 100%;
-  max-width: 860px; /* Mais largo para acomodar a tabela e o grid de mesas */
-  text-align: center;
-}
-
-/* Logotipo clicável com efeito de transição suave */
-.logo-clicavel {
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: block;
-}
-
-.logo-clicavel:hover {
-  transform: scale(1.05);
-}
-
-/* Logo da página pública: maior, hover discreto, sem rotação ou desfoque */
-.logo-publica {
-  max-height: 150px !important;
-  width: auto;
-  margin: 0 auto;
-  display: block;
-  cursor: pointer;
-  transition: transform 0.2s ease-in-out;
-}
-
-.logo-publica:hover {
-  transform: scale(1.02); /* Efeito de hover bem discreto, sem rotação e sem desfoque */
-}
-
+* {  margin: 0;  padding: 0;  box-sizing: border-box;}.login-container {  display: flex;  justify-content: center;  align-items: center;  width: 100vw;  height: 100vh;  background-color: #ff6e35;   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;}.login-card {  background: #ffffff;  padding: 30px 35px;  border-radius: 10px;  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);  width: 100%;  max-width: 420px;  text-align: center;}.sistema-logo {  width: 100%;  max-width: 160px;  height: auto;  margin: 0 auto 10px auto;  display: block;}.subtitle {  color: #666;  font-size: 14px;  margin-bottom: 25px;}.input-group {  display: flex;  flex-direction: column;  align-items: flex-start;  margin-bottom: 15px;   width: 100%;}.input-group label {  display: block;  font-size: 14px;  color: #333;  margin-bottom: 5px;  font-weight: bold;}.input-group input {  width: 100%;  padding: 12px;  border: 1px solid #ccc;  border-radius: 6px;  font-size: 15px;  color: #333;  background-color: #ffffff;  transition: border-color 0.2s;}.input-group input:focus {  border-color: #ff6e35;  outline: none;}.login-button {  width: 100%;  padding: 14px;  background-color: #ff6e35;  color: white;  border: none;  border-radius: 6px;  font-size: 15px;  font-weight: bold;  cursor: pointer;  transition: background-color 0.2s;  text-transform: uppercase;  margin-top: 10px;}.login-button:hover {  background-color: #e55b24;}.test-credentials {  margin-top: 20px;  color: #888;  font-size: 12px;}.logo-premium {  border-radius: 12px;  padding: 8px;  background: rgba(255, 255, 255, 0.8);  border: 1px solid rgba(255, 255, 255, 0.3);  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);  backdrop-filter: blur(5px);  -webkit-backdrop-filter: blur(5px);  filter: drop-shadow(0 6px 12px rgba(255, 110, 53, 0.18));  transition: all 0.3s ease;  display: block;}.logo-premium:hover {  transform: scale(1.05) rotate(1deg);  filter: drop-shadow(0 10px 20px rgba(255, 110, 53, 0.28));  background: #ffffff;}.reservas-publicas-container {  display: flex;  justify-content: center;  align-items: center;  width: 100vw;  min-height: 100vh;  background-color: #ff6e35;   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;  padding: 40px 20px;  overflow-y: auto;}.reservas-publicas-card {  background: #ffffff;  padding: 35px 40px;  border-radius: 12px;  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);  width: 100%;  max-width: 860px;   text-align: center;}.logo-clicavel {  cursor: pointer;  transition: all 0.3s ease;  display: block;}.logo-clicavel:hover {  transform: scale(1.05);}.logo-publica {  max-height: 150px !important;  width: auto;  margin: 0 auto;  display: block;  cursor: pointer;  transition: transform 0.2s ease-in-out;}.logo-publica:hover {  transform: scale(1.02); }

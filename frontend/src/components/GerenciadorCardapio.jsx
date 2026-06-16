@@ -1,274 +1,1 @@
-import React, { useState, useEffect } from 'react';
-import { buscarProdutos, criarProduto, atualizarProduto, deletarProduto } from '../servicos/produtoServico';
-import './GerenciadorCardapio.css';
-
-export default function GerenciadorCardapio() {
-  const [produtos, setProdutos] = useState([]);
-  const [termoBusca, setTermoBusca] = useState('');
-  const [filtroCategoria, setFiltroCategoria] = useState('Todas');
-  
-  // Estados do Modal e Formulário
-  const [modalAberto, setModalAberto] = useState(false);
-  const [produtoEmEdicao, setProdutoEmEdicao] = useState(null);
-  const [nome, setNome] = useState('');
-  const [precoBase, setPrecoBase] = useState('');
-  const [categoria, setCategoria] = useState('Pratos Principais');
-  
-  // Esse é o truque para os atributos flexíveis do MongoDB!
-  const [extras, setExtras] = useState([{ chave: '', valor: '' }]);
-
-  // Carrega os produtos 
-  useEffect(() => {
-    carregarProdutos();
-  }, []);
-
-  const carregarProdutos = async () => {
-    try {
-      const dados = await buscarProdutos();
-      setProdutos(dados);
-    } catch (erro) {
-      console.error('Erro ao carregar produtos:', erro);
-    }
-  };
-
-  const abrirModalNovo = () => {
-    setProdutoEmEdicao(null);
-    setNome('');
-    setPrecoBase('');
-    setCategoria('Pratos Principais');
-    setExtras([{ chave: '', valor: '' }]);
-    setModalAberto(true);
-  };
-
-  const abrirModalEdicao = (produto) => {
-    setProdutoEmEdicao(produto);
-    setNome(produto.nome);
-    setPrecoBase(produto.precoBase);
-    setCategoria(produto.categoria);
-    
-    // Transforma o objeto do MongoDB de volta para a lista do formulário
-    if (produto.informacoesExtras && Object.keys(produto.informacoesExtras).length > 0) {
-      const extrasArray = Object.entries(produto.informacoesExtras).map(([chave, valor]) => ({ chave, valor }));
-      setExtras(extrasArray);
-    } else {
-      setExtras([{ chave: '', valor: '' }]);
-    }
-    
-    setModalAberto(true);
-  };
-
-  const fecharModal = () => {
-    setModalAberto(false);
-  };
-
-  // Funções para manipular os campos dinâmicos de extras
-  const adicionarExtra = () => setExtras([...extras, { chave: '', valor: '' }]);
-  const removerExtra = (index) => setExtras(extras.filter((_, i) => i !== index));
-  const atualizarExtra = (index, campo, novoValor) => {
-    const novosExtras = [...extras];
-    novosExtras[index][campo] = novoValor;
-    setExtras(novosExtras);
-  };
-
-  const handleSalvar = async (e) => {
-    e.preventDefault();
-    
-    // Converte a lista de extras em um objeto flexível para o MongoDB
-    const informacoesExtrasObj = extras.reduce((acc, curr) => {
-      if (curr.chave.trim() !== '') {
-        acc[curr.chave] = curr.valor;
-      }
-      return acc;
-    }, {});
-
-    const dadosProduto = {
-      nome,
-      precoBase: parseFloat(precoBase),
-      categoria,
-      informacoesExtras: informacoesExtrasObj
-    };
-
-    try {
-      if (produtoEmEdicao) {
-        await atualizarProduto(produtoEmEdicao._id, dadosProduto);
-      } else {
-        await criarProduto(dadosProduto);
-      }
-      fecharModal();
-      carregarProdutos();
-    } catch (erro) {
-      alert('Erro ao salvar produto.');
-    }
-  };
-
-  const handleDeletar = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir este produto?')) {
-      try {
-        await deletarProduto(id);
-        carregarProdutos();
-      } catch (erro) {
-        alert('Erro ao excluir produto.');
-      }
-    }
-  };
-
-  // Filtros da tabela
-  const produtosFiltrados = produtos.filter(p => {
-    const atendeCategoria = filtroCategoria === 'Todas' || p.categoria === filtroCategoria;
-    const atendeBusca = p.nome.toLowerCase().includes(termoBusca.toLowerCase());
-    return atendeCategoria && atendeBusca;
-  });
-
-  return (
-    <div className="gerenciador-cardapio">
-      
-      {/* Barra de Ações Superior */}
-      <div className="cardapio-barra-acoes">
-        <div className="cardapio-campo-busca">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <input
-            type="text"
-            placeholder="Buscar prato por nome..."
-            value={termoBusca}
-            onChange={(e) => setTermoBusca(e.target.value)}
-          />
-        </div>
-
-        <select 
-          className="cardapio-filtro-categoria"
-          value={filtroCategoria}
-          onChange={(e) => setFiltroCategoria(e.target.value)}
-        >
-          <option value="Todas">Todas as Categorias</option>
-          <option value="Entradas">Entradas</option>
-          <option value="Pratos Principais">Pratos Principais</option>
-          <option value="Bebidas">Bebidas</option>
-          <option value="Sobremesas">Sobremesas</option>
-        </select>
-
-        <button className="btn-novo-produto" onClick={abrirModalNovo}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Novo Item
-        </button>
-      </div>
-
-      {/* Tabela de Produtos */}
-      <div className="cardapio-tabela-card">
-        <div className="cardapio-tabela-header">
-          <h3>Itens do Cardápio</h3>
-          {/* CORREÇÃO DA CONTAGEM AQUI */}
-          <span className="cardapio-contagem">
-            {produtosFiltrados.length} {produtosFiltrados.length === 1 ? 'item' : 'itens'}
-          </span>
-        </div>
-
-        <table className="cardapio-tabela">
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Categoria</th>
-              <th>Preço Base</th>
-              <th>Informações Extras</th>
-              <th style={{ textAlign: 'right' }}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {produtosFiltrados.map(produto => {
-              // Define a cor do badge baseado na categoria
-              let classeBadge = 'badge-categoria ';
-              if (produto.categoria === 'Entradas') classeBadge += 'badge-entradas';
-              else if (produto.categoria === 'Pratos Principais') classeBadge += 'badge-principais';
-              else if (produto.categoria === 'Bebidas') classeBadge += 'badge-bebidas';
-              else classeBadge += 'badge-sobremesas';
-
-              return (
-                <tr key={produto._id}>
-                  <td className="produto-nome">{produto.nome}</td>
-                  <td><span className={classeBadge}>{produto.categoria}</span></td>
-                  <td className="produto-preco">R$ {produto.precoBase.toFixed(2).replace('.', ',')}</td>
-                  <td>
-                    {/* Renderiza os atributos dinâmicos como pequenas tags */}
-                    {produto.informacoesExtras && Object.entries(produto.informacoesExtras).map(([chave, valor]) => (
-                      <span key={chave} className="produto-extras-resumo">
-                        <strong>{chave}:</strong> {valor}
-                      </span>
-                    ))}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#2196f3', marginRight: '10px' }} onClick={() => abrirModalEdicao(produto)}>
-                      Editar
-                    </button>
-                    <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#e53e3e' }} onClick={() => handleDeletar(produto._id)}>
-                      Excluir
-                    </button>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Modal de Cadastro/Edição */}
-      {modalAberto && (
-        <div className="cardapio-modal-overlay">
-          <div className="cardapio-modal" style={{ padding: '24px' }}>
-            <h2 style={{ marginBottom: '20px', fontSize: '18px', color: '#1a202c' }}>
-              {produtoEmEdicao ? 'Editar Produto' : 'Novo Produto'}
-            </h2>
-
-            <form onSubmit={handleSalvar}>
-              <div className="cardapio-form-grupo">
-                <label>Nome do Item *</label>
-                <input required type="text" value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: Hambúrguer Clássico" />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="cardapio-form-grupo">
-                  <label>Preço Base (R$) *</label>
-                  <input required type="number" step="0.01" value={precoBase} onChange={e => setPrecoBase(e.target.value)} placeholder="0.00" />
-                </div>
-                <div className="cardapio-form-grupo">
-                  <label>Categoria *</label>
-                  <select value={categoria} onChange={e => setCategoria(e.target.value)}>
-                    <option value="Entradas">Entradas</option>
-                    <option value="Pratos Principais">Pratos Principais</option>
-                    <option value="Bebidas">Bebidas</option>
-                    <option value="Sobremesas">Sobremesas</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Seção de Atributos Flexíveis */}
-              <div style={{ marginTop: '16px', marginBottom: '24px', padding: '16px', background: '#f7fafc', borderRadius: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#4a5568' }}>Atributos Extras (Opcional)</label>
-                  <button type="button" onClick={adicionarExtra} style={{ fontSize: '12px', background: 'transparent', border: '1px dashed #ff6e35', color: '#ff6e35', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer' }}>
-                    + Adicionar Atributo
-                  </button>
-                </div>
-                
-                {extras.map((extra, index) => (
-                  <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 30px', gap: '8px', marginBottom: '8px' }}>
-                    <input type="text" placeholder="Ex: Tamanho" value={extra.chave} onChange={e => atualizarExtra(index, 'chave', e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
-                    <input type="text" placeholder="Ex: 500ml" value={extra.valor} onChange={e => atualizarExtra(index, 'valor', e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }} />
-                    <button type="button" onClick={() => removerExtra(index)} style={{ background: '#fed7d7', color: '#e53e3e', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>X</button>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button type="button" onClick={fecharModal} style={{ padding: '10px 16px', background: '#edf2f7', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Cancelar</button>
-                <button type="submit" style={{ padding: '10px 16px', background: '#ff6e35', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Salvar Item</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+import React, { useState, useEffect } from 'react';import { buscarProdutos, criarProduto, atualizarProduto, deletarProduto } from '../servicos/produtoServico';import './GerenciadorCardapio.css';export default function GerenciadorCardapio() {  const [produtos, setProdutos] = useState([]);  const [termoBusca, setTermoBusca] = useState('');  const [filtroCategoria, setFiltroCategoria] = useState('Todas');  const [modalAberto, setModalAberto] = useState(false);  const [produtoEmEdicao, setProdutoEmEdicao] = useState(null);  const [nome, setNome] = useState('');  const [precoBase, setPrecoBase] = useState('');  const [categoria, setCategoria] = useState('Pratos Principais');  const [extras, setExtras] = useState([{ chave: '', valor: '' }]);  useEffect(() => {    carregarProdutos();  }, []);  const carregarProdutos = async () => {    try {      const dados = await buscarProdutos();      setProdutos(dados);    } catch (erro) {      console.error('Erro ao carregar produtos:', erro);    }  };  const abrirModalNovo = () => {    setProdutoEmEdicao(null);    setNome('');    setPrecoBase('');    setCategoria('Pratos Principais');    setExtras([{ chave: '', valor: '' }]);    setModalAberto(true);  };  const abrirModalEdicao = (produto) => {    setProdutoEmEdicao(produto);    setNome(produto.nome);    setPrecoBase(produto.precoBase);    setCategoria(produto.categoria);    if (produto.informacoesExtras && Object.keys(produto.informacoesExtras).length > 0) {      const extrasArray = Object.entries(produto.informacoesExtras).map(([chave, valor]) => ({ chave, valor }));      setExtras(extrasArray);    } else {      setExtras([{ chave: '', valor: '' }]);    }    setModalAberto(true);  };  const fecharModal = () => {    setModalAberto(false);  };  const adicionarExtra = () => setExtras([...extras, { chave: '', valor: '' }]);  const removerExtra = (index) => setExtras(extras.filter((_, i) => i !== index));  const atualizarExtra = (index, campo, novoValor) => {    const novosExtras = [...extras];    novosExtras[index][campo] = novoValor;    setExtras(novosExtras);  };  const handleSalvar = async (e) => {    e.preventDefault();    const informacoesExtrasObj = extras.reduce((acc, curr) => {      if (curr.chave.trim() !== '') {        acc[curr.chave] = curr.valor;      }      return acc;    }, {});    const dadosProduto = {      nome,      precoBase: parseFloat(precoBase),      categoria,      informacoesExtras: informacoesExtrasObj    };    try {      if (produtoEmEdicao) {        await atualizarProduto(produtoEmEdicao._id, dadosProduto);      } else {        await criarProduto(dadosProduto);      }      fecharModal();      carregarProdutos();    } catch (erro) {      alert('Erro ao salvar produto.');    }  };  const handleDeletar = async (id) => {    if (window.confirm('Tem certeza que deseja excluir este produto?')) {      try {        await deletarProduto(id);        carregarProdutos();      } catch (erro) {        alert('Erro ao excluir produto.');      }    }  };  const produtosFiltrados = produtos.filter(p => {    const atendeCategoria = filtroCategoria === 'Todas' || p.categoria === filtroCategoria;    const atendeBusca = p.nome.toLowerCase().includes(termoBusca.toLowerCase());    return atendeCategoria && atendeBusca;  });  return (    <div className="gerenciador-cardapio">      {}      <div className="cardapio-barra-acoes">        <div className="cardapio-campo-busca">          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>          </svg>          <input            type="text"            placeholder="Buscar prato por nome..."            value={termoBusca}            onChange={(e) => setTermoBusca(e.target.value)}          />        </div>        <select           className="cardapio-filtro-categoria"          value={filtroCategoria}          onChange={(e) => setFiltroCategoria(e.target.value)}        >          <option value="Todas">Todas as Categorias</option>          <option value="Entradas">Entradas</option>          <option value="Pratos Principais">Pratos Principais</option>          <option value="Bebidas">Bebidas</option>          <option value="Sobremesas">Sobremesas</option>        </select>        <button className="btn-novo-produto" onClick={abrirModalNovo}>          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>          </svg>          Novo Item        </button>      </div>      {}      <div className="cardapio-tabela-card">        <div className="cardapio-tabela-header">          <h3>Itens do Cardápio</h3>          {}          <span className="cardapio-contagem">            {produtosFiltrados.length} {produtosFiltrados.length === 1 ? 'item' : 'itens'}          </span>        </div>        <table className="cardapio-tabela">          <thead>            <tr>              <th>Nome</th>              <th>Categoria</th>              <th>Preço Base</th>              <th>Informações Extras</th>              <th style={{ textAlign: 'right' }}>Ações</th>            </tr>          </thead>          <tbody>            {produtosFiltrados.map(produto => {              let classeBadge = 'badge-categoria ';              if (produto.categoria === 'Entradas') classeBadge += 'badge-entradas';              else if (produto.categoria === 'Pratos Principais') classeBadge += 'badge-principais';              else if (produto.categoria === 'Bebidas') classeBadge += 'badge-bebidas';              else classeBadge += 'badge-sobremesas';              return (                <tr key={produto._id}>                  <td className="produto-nome">{produto.nome}</td>                  <td><span className={classeBadge}>{produto.categoria}</span></td>                  <td className="produto-preco">R$ {produto.precoBase.toFixed(2).replace('.', ',')}</td>                  <td>                    {}                    {produto.informacoesExtras && Object.entries(produto.informacoesExtras).map(([chave, valor]) => (                      <span key={chave} className="produto-extras-resumo">                        <strong>{chave}:</strong> {valor}                      </span>                    ))}                  </td>                  <td style={{ textAlign: 'right' }}>                    <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#2196f3', marginRight: '10px' }} onClick={() => abrirModalEdicao(produto)}>                      Editar                    </button>                    <button style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#e53e3e' }} onClick={() => handleDeletar(produto._id)}>                      Excluir                    </button>                  </td>                </tr>              )            })}          </tbody>        </table>      </div>      {}      {modalAberto && (        <div className="cardapio-modal-overlay">          <div className="cardapio-modal" style={{ padding: '24px' }}>            <h2 style={{ marginBottom: '20px', fontSize: '18px', color: '#1a202c' }}>              {produtoEmEdicao ? 'Editar Produto' : 'Novo Produto'}            </h2>            <form onSubmit={handleSalvar}>              <div className="cardapio-form-grupo">                <label>Nome do Item *</label>                <input required type="text" value={nome} onChange={e => setNome(e.target.value)} placeholder="Ex: Hambúrguer Clássico" />              </div>              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>                <div className="cardapio-form-grupo">                  <label>Preço Base (R$) *</label>                  <input required type="number" step="0.01" value={precoBase} onChange={e => setPrecoBase(e.target.value)} placeholder="0.00" />                </div>                <div className="cardapio-form-grupo">                  <label>Categoria *</label>                  <select value={categoria} onChange={e => setCategoria(e.target.value)}>                    <option value="Entradas">Entradas</option>                    <option value="Pratos Principais">Pratos Principais</option>                    <option value="Bebidas">Bebidas</option>                    <option value="Sobremesas">Sobremesas</option>                  </select>                </div>              </div>              {}              <div style={{ marginTop: '16px', marginBottom: '24px', padding: '16px', background: '#f7fafc', borderRadius: '10px' }}>                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#4a5568' }}>Atributos Extras (Opcional)</label>                  <button type="button" onClick={adicionarExtra} style={{ fontSize: '12px', background: 'transparent', border: '1px dashed #ff6e35', color: '#ff6e35', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer' }}>                    + Adicionar Atributo                  </button>                </div>                {extras.map((extra, index) => (                  <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 30px', gap: '8px', marginBottom: '8px' }}>                    <input type="text" placeholder="Ex: Tamanho" value={extra.chave} onChange={e => atualizarExtra(index, 'chave', e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }} />                    <input type="text" placeholder="Ex: 500ml" value={extra.valor} onChange={e => atualizarExtra(index, 'valor', e.target.value)} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }} />                    <button type="button" onClick={() => removerExtra(index)} style={{ background: '#fed7d7', color: '#e53e3e', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>X</button>                  </div>                ))}              </div>              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>                <button type="button" onClick={fecharModal} style={{ padding: '10px 16px', background: '#edf2f7', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Cancelar</button>                <button type="submit" style={{ padding: '10px 16px', background: '#ff6e35', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>Salvar Item</button>              </div>            </form>          </div>        </div>      )}    </div>  );}

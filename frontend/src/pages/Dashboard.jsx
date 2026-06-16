@@ -1,235 +1,1 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import './Dashboard.css';
-import GerenciadorReservas from '../components/GerenciadorReservas';
-import GerenciadorPedidos from '../components/GerenciadorPedidos';
-import GerenciadorRelatorios from '../components/GerenciadorRelatorios';
-import GerenciadorCardapio from '../components/GerenciadorCardapio';
-import GerenciadorUsuarios from '../components/GerenciadorUsuarios'; // <-- IMPORTAÇÃO DE USUÁRIOS
-import GraficoLinhaPedidos from '../components/GraficoLinhaPedidos';
-import GraficoBarraReservas from '../components/GraficoBarraReservas';
-import { ReservaServico } from '../servicos/ReservaServico';
-import { PedidoServico } from '../servicos/PedidoServico';
-
-const servicoReservas = new ReservaServico();
-const servicoPedidos = new PedidoServico();
-
-function Dashboard({ activeTab = 'dashboard' }) {
-  const navigate = useNavigate();
-  const sessionData = localStorage.getItem('user_session');
-  const user = sessionData ? JSON.parse(sessionData) : { perfil: 'ADMIN' };
-  const isAdmin = user.perfil === 'ADMIN';
-
-  const [reservas, setReservas] = useState([]);
-  const [mesas, setMesas] = useState([]);
-  const [pedidos, setPedidos] = useState([]);
-
-  useEffect(() => {
-    const carregarDadosDashboard = async () => {
-      try {
-        const listaReservas = await servicoReservas.obterTodasReservas();
-        const listaMesas = await servicoReservas.obterTodasMesas();
-        const listaPedidos = await servicoPedidos.obterTodosPedidos();
-        setReservas(listaReservas);
-        setMesas(listaMesas);
-        setPedidos(listaPedidos);
-      } catch (e) {
-        console.error("Erro ao carregar dados no dashboard:", e);
-      }
-    };
-    carregarDadosDashboard();
-  }, [activeTab]);
-
-  const handleLogout = (e) => {
-    e.preventDefault();
-    localStorage.removeItem('user_session');
-    navigate('/login');
-  };
-
-  const totalReservas = reservas.length.toString();
-  const totalMesasOcupadas = mesas.filter(m => m.status === 'Ocupada' || m.status === 'Reservada').length.toString();
-
-  const hoje = new Date();
-  hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());
-  const hojeStr = hoje.toISOString().slice(0, 10);
-
-  const pedidosDoDia = pedidos.filter(p => p.dataAbertura?.startsWith(hojeStr)).length.toString();
-
-  const faturamentoTotalVal = pedidos
-    .filter(p => p.status === 'Entregue')
-    .reduce((acumulador, pedido) => acumulador + (pedido.valorTotal || 0), 0);
-  const faturamentoExibido = `R$ ${faturamentoTotalVal.toFixed(2).replace('.', ',')}`;
-
-  const obterDadosPedidosPorDia = () => {
-    const contagem = {};
-    const dataAtual = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(dataAtual);
-      d.setDate(dataAtual.getDate() - i);
-      const dataStr = d.toISOString().slice(0, 10);
-      contagem[dataStr] = 0;
-    }
-    pedidos.forEach(p => {
-      if (p.dataAbertura) {
-        const data = p.dataAbertura.slice(0, 10);
-        if (contagem[data] !== undefined) contagem[data] += 1;
-      }
-    });
-    const chavesOrdenadas = Object.keys(contagem).sort();
-    return chavesOrdenadas.map(chave => {
-      const [ano, mes, dia] = chave.split('-');
-      return { rotulo: `${dia}/${mes}`, valor: contagem[chave] };
-    });
-  };
-
-  const obterDadosReservasPorPeriodo = () => {
-    const periodos = { 'Almoço (10h-15h)': 0, 'Tarde (15h-18h)': 0, 'Jantar (18h-22h)': 0 };
-    reservas.forEach(r => {
-      if (r.dataHora) {
-        const dataObj = new Date(r.dataHora);
-        const horas = dataObj.getHours();
-        if (horas >= 10 && horas < 15) periodos['Almoço (10h-15h)'] += 1;
-        else if (horas >= 15 && horas < 18) periodos['Tarde (15h-18h)'] += 1;
-        else if (horas >= 18 && horas <= 22) periodos['Jantar (18h-22h)'] += 1;
-      }
-    });
-    return Object.entries(periodos).map(([rotulo, valor]) => ({ rotulo, valor }));
-  };
-
-  const cardsData = [
-    { id: 1, title: 'Total de Reservas', value: totalReservas, color: '#ff6e35', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4" /><path d="M16 2v4" /><rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /></svg>) },
-    { id: 2, title: 'Pedidos do Dia', value: pedidosDoDia, color: '#4caf50', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>) },
-    { id: 3, title: 'Mesas Ocupadas/Reservadas', value: totalMesasOcupadas, color: '#2196f3', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 18v3" /><path d="M20 18v3" /><path d="M19 14v4" /><path d="M5 14v4" /><path d="M3 8h18v6H3z" /></svg>) },
-    ...(isAdmin ? [{ id: 4, title: 'Faturamento', value: faturamentoExibido, color: '#9c27b0', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>) }] : []),
-  ];
-
-  return (
-    <div className="dashboard-layout">
-      <aside className="sidebar">
-        <div className="sidebar-logo"><h2>Varanda do Nazo</h2></div>
-        <nav className="sidebar-nav">
-          <a href="/" className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/'); }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
-            Dashboard
-          </a>
-
-          {/* MENU DE USUÁRIOS AQUI! */}
-          {isAdmin && (
-            <a href="/usuarios" className={`nav-item ${activeTab === 'usuarios' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/usuarios'); }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-              Usuários
-            </a>
-          )}
-
-          <a href="/reservas" className={`nav-item ${activeTab === 'reservas' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/reservas'); }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4" /><path d="M16 2v4" /><rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /></svg>
-            Reservas
-          </a>
-          
-          <a href="/pedidos" className={`nav-item ${activeTab === 'pedidos' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/pedidos'); }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>
-            Pedidos
-          </a>
-
-          <a href="/cardapio" className={`nav-item ${activeTab === 'cardapio' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/cardapio'); }}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M6.5 2L6 20"/></svg>
-            Cardápio
-          </a>
-
-          {isAdmin && (
-            <a href="/relatorios" className={`nav-item ${activeTab === 'relatorios' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/relatorios'); }}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>
-              Relatórios
-            </a>
-          )}
-        </nav>
-        <div className="sidebar-footer">
-          <a href="#logout" className="nav-item logout" onClick={handleLogout}><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>Logout</a>
-        </div>
-      </aside>
-
-      <main className="main-content">
-        <header className="top-bar">
-          <h1>
-            {/* TÍTULO DE USUÁRIOS AQUI! */}
-            {activeTab === 'reservas' ? 'Gerenciamento de Reservas'
-              : activeTab === 'pedidos' ? 'Gerenciamento de Pedidos'
-              : activeTab === 'cardapio' ? 'Gerenciamento de Cardápio'
-              : activeTab === 'usuarios' ? 'Gerenciamento de Usuários'
-              : activeTab === 'relatorios' ? 'Relatórios'
-              : 'Dashboard'}
-          </h1>
-          <div className="user-profile">
-            <div className="user-info">
-              <p className="user-name">{user.perfil === 'ADMIN' ? 'Admin' : 'Atendente'}</p>
-              <p className="user-role">{user.perfil}</p>
-            </div>
-          </div>
-        </header>
-
-        {activeTab === 'dashboard' ? (
-          <>
-            <section className="metrics-grid">
-              {cardsData.map((card) => (
-                <div key={card.id} className="metric-card">
-                  <div className="metric-content"><p className="metric-title">{card.title}</p><h3 className="metric-value">{card.value}</h3></div>
-                  <div className="metric-icon-wrapper" style={{ backgroundColor: `${card.color}15`, color: card.color }}>{card.icon}</div>
-                </div>
-              ))}
-            </section>
-
-            <section className="charts-grid">
-              <div className="chart-card">
-                <h3>Pedidos por Dia</h3>
-                <div style={{ height: '240px' }}><GraficoLinhaPedidos dados={obterDadosPedidosPorDia()} /></div>
-              </div>
-              <div className="chart-card">
-                <h3>Reservas por Período</h3>
-                <div style={{ height: '240px' }}><GraficoBarraReservas dados={obterDadosReservasPorPeriodo()} /></div>
-              </div>
-            </section>
-
-            <section className="table-section">
-              <div className="table-card">
-                <h3>Últimas Reservas</h3>
-                <div className="table-container">
-                  <table>
-                    <thead>
-                      <tr><th>Código</th><th>Cliente</th><th>Data</th><th>Hora</th><th>Pessoas</th><th>Mesa</th><th>Status</th></tr>
-                    </thead>
-                    <tbody>
-                      {reservas.slice(-4).reverse().map((res) => (
-                        <tr key={res.id}>
-                          <td><strong>{res.id}</strong></td>
-                          <td>{res.clienteNome}</td>
-                          <td>{new Date(res.dataHora).toLocaleDateString('pt-BR')}</td>
-                          <td>{new Date(res.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</td>
-                          <td>{res.quantidadePessoas} Pessoas</td>
-                          <td>{res.mesaNumero}</td>
-                          <td><span className={`status-badge ${res.status.toLowerCase()}`}>{res.status}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
-          </>
-        ) : activeTab === 'reservas' ? (
-          <div className="bg-white p-4 rounded-4 shadow-sm" style={{ flex: 1, overflowY: 'auto' }}><GerenciadorReservas modoPublico={false} /></div>
-        ) : activeTab === 'pedidos' ? (
-          <GerenciadorPedidos />
-        ) : activeTab === 'cardapio' ? ( 
-          <GerenciadorCardapio />
-        ) : activeTab === 'usuarios' ? ( 
-          /* TELA DE USUÁRIOS RENDERIZADA AQUI! */
-          <GerenciadorUsuarios />
-        ) : (
-          <GerenciadorRelatorios />
-        )}
-      </main>
-    </div>
-  );
-}
-
-export default Dashboard;
+import React, { useState, useEffect } from 'react';import { useNavigate } from 'react-router-dom';import './Dashboard.css';import GerenciadorReservas from '../components/GerenciadorReservas';import GerenciadorPedidos from '../components/GerenciadorPedidos';import GerenciadorRelatorios from '../components/GerenciadorRelatorios';import GerenciadorCardapio from '../components/GerenciadorCardapio';import GerenciadorUsuarios from '../components/GerenciadorUsuarios'; import GraficoLinhaPedidos from '../components/GraficoLinhaPedidos';import GraficoBarraReservas from '../components/GraficoBarraReservas';import { ReservaServico } from '../servicos/ReservaServico';import { PedidoServico } from '../servicos/PedidoServico';const servicoReservas = new ReservaServico();const servicoPedidos = new PedidoServico();function Dashboard({ activeTab = 'dashboard' }) {  const navigate = useNavigate();  const sessionData = localStorage.getItem('user_session');  const user = sessionData ? JSON.parse(sessionData) : { perfil: 'ADMIN' };  const isAdmin = user.perfil === 'ADMIN';  const [reservas, setReservas] = useState([]);  const [mesas, setMesas] = useState([]);  const [pedidos, setPedidos] = useState([]);  useEffect(() => {    const carregarDadosDashboard = async () => {      try {        const listaReservas = await servicoReservas.obterTodasReservas();        const listaMesas = await servicoReservas.obterTodasMesas();        const listaPedidos = await servicoPedidos.obterTodosPedidos();        setReservas(listaReservas);        setMesas(listaMesas);        setPedidos(listaPedidos);      } catch (e) {        console.error("Erro ao carregar dados no dashboard:", e);      }    };    carregarDadosDashboard();  }, [activeTab]);  const handleLogout = (e) => {    e.preventDefault();    localStorage.removeItem('user_session');    navigate('/login');  };  const totalReservas = reservas.length.toString();  const totalMesasOcupadas = mesas.filter(m => m.status === 'Ocupada' || m.status === 'Reservada').length.toString();  const hoje = new Date();  hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());  const hojeStr = hoje.toISOString().slice(0, 10);  const pedidosDoDia = pedidos.filter(p => p.dataAbertura?.startsWith(hojeStr)).length.toString();  const faturamentoTotalVal = pedidos    .filter(p => p.status === 'Entregue')    .reduce((acumulador, pedido) => acumulador + (pedido.valorTotal || 0), 0);  const faturamentoExibido = `R$ ${faturamentoTotalVal.toFixed(2).replace('.', ',')}`;  const obterDadosPedidosPorDia = () => {    const contagem = {};    const dataAtual = new Date();    for (let i = 6; i >= 0; i--) {      const d = new Date(dataAtual);      d.setDate(dataAtual.getDate() - i);      const dataStr = d.toISOString().slice(0, 10);      contagem[dataStr] = 0;    }    pedidos.forEach(p => {      if (p.dataAbertura) {        const data = p.dataAbertura.slice(0, 10);        if (contagem[data] !== undefined) contagem[data] += 1;      }    });    const chavesOrdenadas = Object.keys(contagem).sort();    return chavesOrdenadas.map(chave => {      const [ano, mes, dia] = chave.split('-');      return { rotulo: `${dia}/${mes}`, valor: contagem[chave] };    });  };  const obterDadosReservasPorPeriodo = () => {    const periodos = { 'Almoço (10h-15h)': 0, 'Tarde (15h-18h)': 0, 'Jantar (18h-22h)': 0 };    reservas.forEach(r => {      if (r.dataHora) {        const dataObj = new Date(r.dataHora);        const horas = dataObj.getHours();        if (horas >= 10 && horas < 15) periodos['Almoço (10h-15h)'] += 1;        else if (horas >= 15 && horas < 18) periodos['Tarde (15h-18h)'] += 1;        else if (horas >= 18 && horas <= 22) periodos['Jantar (18h-22h)'] += 1;      }    });    return Object.entries(periodos).map(([rotulo, valor]) => ({ rotulo, valor }));  };  const cardsData = [    { id: 1, title: 'Total de Reservas', value: totalReservas, color: '#ff6e35', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4" /><path d="M16 2v4" /><rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /></svg>) },    { id: 2, title: 'Pedidos do Dia', value: pedidosDoDia, color: '#4caf50', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>) },    { id: 3, title: 'Mesas Ocupadas/Reservadas', value: totalMesasOcupadas, color: '#2196f3', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 18v3" /><path d="M20 18v3" /><path d="M19 14v4" /><path d="M5 14v4" /><path d="M3 8h18v6H3z" /></svg>) },    ...(isAdmin ? [{ id: 4, title: 'Faturamento', value: faturamentoExibido, color: '#9c27b0', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="2" y2="22" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>) }] : []),  ];  return (    <div className="dashboard-layout">      <aside className="sidebar">        <div className="sidebar-logo"><h2>Varanda do Nazo</h2></div>        <nav className="sidebar-nav">          <a href="/" className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/'); }}>            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>            Dashboard          </a>          {}          {isAdmin && (            <a href="/usuarios" className={`nav-item ${activeTab === 'usuarios' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/usuarios'); }}>              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>              Usuários            </a>          )}          <a href="/reservas" className={`nav-item ${activeTab === 'reservas' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/reservas'); }}>            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 2v4" /><path d="M16 2v4" /><rect width="18" height="18" x="3" y="4" rx="2" /><path d="M3 10h18" /></svg>            Reservas          </a>          <a href="/pedidos" className={`nav-item ${activeTab === 'pedidos' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/pedidos'); }}>            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>            Pedidos          </a>          <a href="/cardapio" className={`nav-item ${activeTab === 'cardapio' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/cardapio'); }}>            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="M6.5 2L6 20"/></svg>            Cardápio          </a>          {isAdmin && (            <a href="/relatorios" className={`nav-item ${activeTab === 'relatorios' ? 'active' : ''}`} onClick={(e) => { e.preventDefault(); navigate('/relatorios'); }}>              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>              Relatórios            </a>          )}        </nav>        <div className="sidebar-footer">          <a href="#logout" className="nav-item logout" onClick={handleLogout}><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>Logout</a>        </div>      </aside>      <main className="main-content">        <header className="top-bar">          <h1>            {}            {activeTab === 'reservas' ? 'Gerenciamento de Reservas'              : activeTab === 'pedidos' ? 'Gerenciamento de Pedidos'              : activeTab === 'cardapio' ? 'Gerenciamento de Cardápio'              : activeTab === 'usuarios' ? 'Gerenciamento de Usuários'              : activeTab === 'relatorios' ? 'Relatórios'              : 'Dashboard'}          </h1>          <div className="user-profile">            <div className="user-info">              <p className="user-name">{user.perfil === 'ADMIN' ? 'Admin' : 'Atendente'}</p>              <p className="user-role">{user.perfil}</p>            </div>          </div>        </header>        {activeTab === 'dashboard' ? (          <>            <section className="metrics-grid">              {cardsData.map((card) => (                <div key={card.id} className="metric-card">                  <div className="metric-content"><p className="metric-title">{card.title}</p><h3 className="metric-value">{card.value}</h3></div>                  <div className="metric-icon-wrapper" style={{ backgroundColor: `${card.color}15`, color: card.color }}>{card.icon}</div>                </div>              ))}            </section>            <section className="charts-grid">              <div className="chart-card">                <h3>Pedidos por Dia</h3>                <div style={{ height: '240px' }}><GraficoLinhaPedidos dados={obterDadosPedidosPorDia()} /></div>              </div>              <div className="chart-card">                <h3>Reservas por Período</h3>                <div style={{ height: '240px' }}><GraficoBarraReservas dados={obterDadosReservasPorPeriodo()} /></div>              </div>            </section>            <section className="table-section">              <div className="table-card">                <h3>Últimas Reservas</h3>                <div className="table-container">                  <table>                    <thead>                      <tr><th>Código</th><th>Cliente</th><th>Data</th><th>Hora</th><th>Pessoas</th><th>Mesa</th><th>Status</th></tr>                    </thead>                    <tbody>                      {reservas.slice(-4).reverse().map((res) => (                        <tr key={res.id}>                          <td><strong>{res.id}</strong></td>                          <td>{res.clienteNome}</td>                          <td>{new Date(res.dataHora).toLocaleDateString('pt-BR')}</td>                          <td>{new Date(res.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</td>                          <td>{res.quantidadePessoas} Pessoas</td>                          <td>{res.mesaNumero}</td>                          <td><span className={`status-badge ${res.status.toLowerCase()}`}>{res.status}</span></td>                        </tr>                      ))}                    </tbody>                  </table>                </div>              </div>            </section>          </>        ) : activeTab === 'reservas' ? (          <div className="bg-white p-4 rounded-4 shadow-sm" style={{ flex: 1, overflowY: 'auto' }}><GerenciadorReservas modoPublico={false} /></div>        ) : activeTab === 'pedidos' ? (          <GerenciadorPedidos />        ) : activeTab === 'cardapio' ? (           <GerenciadorCardapio />        ) : activeTab === 'usuarios' ? (           <GerenciadorUsuarios />        ) : (          <GerenciadorRelatorios />        )}      </main>    </div>  );}export default Dashboard;

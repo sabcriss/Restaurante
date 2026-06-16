@@ -1,8 +1,4 @@
 import mongoose from 'mongoose';
-
-/**
- * Schema do Mongoose representando uma reserva de mesa no restaurante.
- */
 const reservaSchema = new mongoose.Schema({
   id: {
     type: String,
@@ -16,7 +12,7 @@ const reservaSchema = new mongoose.Schema({
     trim: true
   },
   dataHora: {
-    type: String, // Comentário explicativo do PORQUÊ: Mantemos o formato string ISO 8601 YYYY-MM-DDTHH:MM para alinhamento direto com o input de datetime-local do frontend.
+    type: String, 
     required: true
   },
   quantidadePessoas: {
@@ -40,8 +36,6 @@ const reservaSchema = new mongoose.Schema({
     trim: true
   }
 }, {
-  timestamps: true // Comentário explicativo do PORQUÊ: Monitorar auditoria de criação e última alteração de reservas.
+  timestamps: true 
 });
-
-// Comentário explicativo do PORQUÊ: Garantir exportação idempotente compatível com reinicializações do node em desenvolvimento.
 export const ReservaModel = mongoose.models.Reserva || mongoose.model('Reserva', reservaSchema);

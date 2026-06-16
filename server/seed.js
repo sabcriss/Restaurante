@@ -5,12 +5,6 @@ import { PedidoModel } from './modelos/Pedido.js';
 import ProdutoCardapioModel from './modelos/ProdutoCardapio.js';
 import UsuarioModel from './modelos/Usuario.js';
 import mongoose from 'mongoose';
-
-/* ==============================
-   CONFIGURAÇÕES DO SCRIPT
-   ============================== */
-
-// Carga inicial de mesas para teste e simulação de capacidade do salão.
 const MESAS_INICIAIS = [
   { numero: 'Mesa 1', capacidade: 4, status: 'Disponível' },
   { numero: 'Mesa 2', capacidade: 4, status: 'Disponível' },
@@ -21,16 +15,12 @@ const MESAS_INICIAIS = [
   { numero: 'Mesa 7', capacidade: 8, status: 'Disponível' },
   { numero: 'Mesa 8', capacidade: 8, status: 'Disponível' },
 ];
-
-// Reservas de simulação para verificar conflitos de horário e fluxo de reservas pendentes.
 const RESERVAS_INICIAIS = [
   { id: 'RES-001', clienteNome: 'João Silva', dataHora: '2026-06-15T19:00', quantidadePessoas: 4, mesaNumero: 'Mesa 5', status: 'Confirmada' },
   { id: 'RES-002', clienteNome: 'Maria Santos', dataHora: '2026-06-15T20:00', quantidadePessoas: 2, mesaNumero: 'Mesa 3', status: 'Confirmada' },
   { id: 'RES-003', clienteNome: 'Ana Paula', dataHora: '2026-06-16T19:30', quantidadePessoas: 6, mesaNumero: 'Mesa 8', status: 'Pendente' },
   { id: 'RES-004', clienteNome: 'Pedro Costa', dataHora: '2026-06-14T18:00', quantidadePessoas: 3, mesaNumero: 'Mesa 2', status: 'Cancelada' },
 ];
-
-// Produtos iniciais para povoar o cardápio do restaurante em diferentes categorias.
 const PRODUTOS_INICIAIS = [
   {
     nome: 'Bruschetta di Pomodoro',
@@ -90,8 +80,6 @@ const PRODUTOS_INICIAIS = [
     categoria: 'Bebidas'
   }
 ];
-
-// Pedidos pré-existentes para alimentar o fluxo de cozinha e histórico financeiro de teste.
 const PEDIDOS_INICIAIS = [
   {
     id: 'PED-001',
@@ -135,8 +123,6 @@ const PEDIDOS_INICIAIS = [
     dataAbertura: '2026-06-16T19:45'
   }
 ];
-
-// Usuários iniciais do sistema com perfis administrativos e de atendimento operacional.
 const USUARIOS_INICIAIS = [
   {
     nome: 'Administrador Principal',
@@ -157,47 +143,32 @@ const USUARIOS_INICIAIS = [
     perfil: 'ATENDENTE'
   }
 ];
-
-/**
- * @function semearBanco
- * @description Apaga os registros anteriores de mesas, reservas, produtos, pedidos e usuários, inserindo novos dados de teste estruturados.
- * @returns {Promise<void>}
- */
 async function semearBanco() {
   try {
     await conectarBanco();
-
     console.log('>>> [Seed] Limpando coleções antigas...');
     await MesaModel.deleteMany({});
     await ReservaModel.deleteMany({});
     await PedidoModel.deleteMany({});
     await ProdutoCardapioModel.deleteMany({});
     await UsuarioModel.deleteMany({});
-
     console.log('>>> [Seed] Semeando mesas padrão...');
     await MesaModel.insertMany(MESAS_INICIAIS);
-
     console.log('>>> [Seed] Semeando reservas de teste...');
     await ReservaModel.insertMany(RESERVAS_INICIAIS);
-
     console.log('>>> [Seed] Semeando produtos do cardápio...');
     await ProdutoCardapioModel.insertMany(PRODUTOS_INICIAIS);
-
     console.log('>>> [Seed] Semeando pedidos de teste...');
     await PedidoModel.insertMany(PEDIDOS_INICIAIS);
-
     console.log('>>> [Seed] Semeando usuários padrão...');
     await UsuarioModel.insertMany(USUARIOS_INICIAIS);
-
     console.log('>>> [Seed] Carga de dados de teste concluída com sucesso!');
   } catch (erro) {
     console.error('>>> [Seed] Erro catastrófico ao semear o banco:', erro.message);
   } finally {
-    // Desconecta do banco de dados para liberar a execução do script
     await mongoose.disconnect();
     console.log('>>> [Seed] Desconectado do MongoDB.');
     process.exit(0);
   }
 }
-
 semearBanco();

@@ -1,107 +1,1 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import logoImg from '../assets/logo.png';
-import '../App.css';
-
-function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const navigate = useNavigate();
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    console.log("Tentando logar no banco de dados com:", email);
-
-    try {
-      // Faz a requisição real para a nossa API do backend
-      const resposta = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // Enviamos 'senha' porque foi assim que chamamos no backend
-        body: JSON.stringify({ email: email, senha: password }), 
-      });
-
-      const dados = await resposta.json();
-
-      if (resposta.ok && dados.sucesso) {
-        // Se o backend confirmou que o usuário existe, salva a sessão
-        localStorage.setItem('user_session', JSON.stringify(dados.usuario));
-        console.log(`Sessão do ${dados.usuario.perfil} salva! Navegando...`);
-        navigate('/');
-      } else {
-        // Se a senha estiver errada, mostra o erro que veio do backend
-        alert(dados.erro || 'Usuário ou senha incorretos!');
-      }
-    } catch (erro) {
-      console.error("Erro na requisição de login:", erro);
-      alert('Erro ao conectar com o servidor. Verifique se o backend está rodando!');
-    }
-  };
-
-  return (
-    <div className="login-container">
-      <div className="login-card">
-
-        <div className="logo-container-sistema">
-          <img src={logoImg} alt="Logo Varanda do Nazo" className="sistema-logo" />
-        </div>
-
-        <p className="subtitle">Faça login para gerenciar o sistema</p>
-
-        <form onSubmit={handleLogin}>
-          <div className="input-group">
-            <label htmlFor="email">E-mail</label>
-            <input
-              type="email"
-              id="email"
-              placeholder="Digite seu e-mail cadastrado"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="input-group">
-            <label htmlFor="password">Senha</label>
-            <input
-              type="password"
-              id="password"
-              placeholder="Digite sua senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <button type="submit" className="login-button">
-            ENTRAR
-          </button>
-
-          <button
-            type="button"
-            className="login-button-secondary"
-            onClick={() => navigate('/reservar')}
-            style={{
-              width: '100%',
-              padding: '14px',
-              backgroundColor: '#f8f9fa',
-              color: '#ff6e35',
-              border: '2px solid #ff6e35',
-              borderRadius: '6px',
-              fontSize: '15px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              textTransform: 'uppercase',
-              marginTop: '12px'
-            }}
-          >
-            Fazer uma Reserva (Sem Login)
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-export default Login;
+import React, { useState } from 'react';import { useNavigate } from 'react-router-dom';import logoImg from '../assets/logo.png';import '../App.css';function Login() {  const [email, setEmail] = useState('');  const [password, setPassword] = useState('');  const navigate = useNavigate();  const handleLogin = async (e) => {    e.preventDefault();    console.log("Tentando logar no banco de dados com:", email);    try {      const resposta = await fetch('/api/login', {        method: 'POST',        headers: { 'Content-Type': 'application/json' },        body: JSON.stringify({ email: email, senha: password }),       });      const dados = await resposta.json();      if (resposta.ok && dados.sucesso) {        localStorage.setItem('user_session', JSON.stringify(dados.usuario));        console.log(`Sessão do ${dados.usuario.perfil} salva! Navegando...`);        navigate('/');      } else {        alert(dados.erro || 'Usuário ou senha incorretos!');      }    } catch (erro) {      console.error("Erro na requisição de login:", erro);      alert('Erro ao conectar com o servidor. Verifique se o backend está rodando!');    }  };  return (    <div className="login-container">      <div className="login-card">        <div className="logo-container-sistema">          <img src={logoImg} alt="Logo Varanda do Nazo" className="sistema-logo" />        </div>        <p className="subtitle">Faça login para gerenciar o sistema</p>        <form onSubmit={handleLogin}>          <div className="input-group">            <label htmlFor="email">E-mail</label>            <input              type="email"              id="email"              placeholder="Digite seu e-mail cadastrado"              value={email}              onChange={(e) => setEmail(e.target.value)}              required            />          </div>          <div className="input-group">            <label htmlFor="password">Senha</label>            <input              type="password"              id="password"              placeholder="Digite sua senha"              value={password}              onChange={(e) => setPassword(e.target.value)}              required            />          </div>          <button type="submit" className="login-button">            ENTRAR          </button>          <button            type="button"            className="login-button-secondary"            onClick={() => navigate('/reservar')}            style={{              width: '100%',              padding: '14px',              backgroundColor: '#f8f9fa',              color: '#ff6e35',              border: '2px solid #ff6e35',              borderRadius: '6px',              fontSize: '15px',              fontWeight: 'bold',              cursor: 'pointer',              transition: 'all 0.2s',              textTransform: 'uppercase',              marginTop: '12px'            }}          >            Fazer uma Reserva (Sem Login)          </button>        </form>      </div>    </div>  );}export default Login;

@@ -1,8 +1,4 @@
 import mongoose from 'mongoose';
-
-/**
- * Schema do Mongoose representando uma mesa no restaurante.
- */
 const mesaSchema = new mongoose.Schema({
   numero: {
     type: String,
@@ -22,8 +18,6 @@ const mesaSchema = new mongoose.Schema({
     default: 'Disponível'
   }
 }, {
-  timestamps: true // Comentário explicativo do PORQUÊ: Criar registros automáticos de data de criação e modificação para auditorias.
+  timestamps: true 
 });
-
-// Comentário explicativo do PORQUÊ: Exportar o modelo compilado ou retornar o modelo já existente para evitar erros de compilação em hot reload.
 export const MesaModel = mongoose.models.Mesa || mongoose.model('Mesa', mesaSchema);
