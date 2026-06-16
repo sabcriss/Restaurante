@@ -55,6 +55,16 @@ function App() {
             </ProtectedRoute>
           } 
         />
+
+        {/* Rota administrativa protegida de geração de relatórios — exclusiva para ADMIN */}
+        <Route 
+          path="/relatorios" 
+          element={
+            <ProtectedRoute>
+              <Dashboard activeTab="relatorios" />
+            </ProtectedRoute>
+          } 
+        />
  
         {/* Rota raiz do dashboard original (Protegida) */}
         <Route 

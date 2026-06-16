@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import GerenciadorReservas from '../components/GerenciadorReservas';
 import GerenciadorPedidos from '../components/GerenciadorPedidos';
+import GerenciadorRelatorios from '../components/GerenciadorRelatorios';
 import { ReservaServico } from '../servicos/ReservaServico';
 
 const servicoReservas = new ReservaServico();
@@ -11,7 +12,7 @@ const servicoReservas = new ReservaServico();
  * @function Dashboard
  * @description Componente do painel administrativo do restaurante.
  * @param {Object} props - Propriedades do componente.
- * @param {string} [props.activeTab='dashboard'] - A aba ativa ('dashboard', 'reservas' ou 'pedidos').
+ * @param {string} [props.activeTab='dashboard'] - A aba ativa ('dashboard', 'reservas', 'pedidos' ou 'relatorios').
  * @returns {React.JSX.Element} Painel administrativo com o conteúdo dinâmico.
  */
 function Dashboard({ activeTab = 'dashboard' }) {
@@ -100,7 +101,19 @@ function Dashboard({ activeTab = 'dashboard' }) {
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>
             Pedidos
           </a>
-          {isAdmin && (<a href="#relatorios" className="nav-item"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>Relatórios</a>)}
+          {isAdmin && (
+            <a
+              href="/relatorios"
+              className={`nav-item ${activeTab === 'relatorios' ? 'active' : ''}`}
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/relatorios');
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>
+              Relatórios
+            </a>
+          )}
         </nav>
         <div className="sidebar-footer">
           <a href="#logout" className="nav-item logout" onClick={handleLogout}><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" x2="9" y1="12" y2="12" /></svg>Logout</a>
@@ -112,6 +125,7 @@ function Dashboard({ activeTab = 'dashboard' }) {
           <h1>
             {activeTab === 'reservas' ? 'Gerenciamento de Reservas'
               : activeTab === 'pedidos' ? 'Gerenciamento de Pedidos'
+              : activeTab === 'relatorios' ? 'Relatórios'
               : 'Dashboard'}
           </h1>
           <div className="user-profile">
@@ -194,8 +208,10 @@ function Dashboard({ activeTab = 'dashboard' }) {
           <div className="bg-white p-4 rounded-4 shadow-sm" style={{ flex: 1, overflowY: 'auto' }}>
             <GerenciadorReservas modoPublico={false} />
           </div>
-        ) : (
+        ) : activeTab === 'pedidos' ? (
           <GerenciadorPedidos />
+        ) : (
+          <GerenciadorRelatorios />
         )}
       </main>
     </div>
