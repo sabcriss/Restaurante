@@ -2,16 +2,24 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import dns from 'dns';
 
-// Carrega as variáveis de ambiente do arquivo .env na raiz do projeto
+/* ==============================
+   CONFIGURAÇÕES DO SCRIPT
+   ============================== */
+
+// Carrega as variáveis de ambiente de diferentes caminhos possíveis para garantir o funcionamento independente de onde o processo Node é iniciado.
 dotenv.config();
+dotenv.config({ path: '../.env' });
 
 // Servidores DNS públicos para contornar falhas de resolução SRV do MongoDB Atlas no Node.js
 const SERVIDORES_DNS = ['8.8.8.8', '1.1.1.1'];
 
-// Carrega o .env corretamente voltando uma pasta, e usa o link do seu grupo como fallback de segurança
-dotenv.config({ path: '../.env' });
+// Recupera a URI de conexão a partir do ambiente externo, evitando dados sensíveis expostos no código.
+const MONGODB_URI = process.env.MONGODB_URI;
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://p0nt4s_db_user:82442mmsm@p0nt4s.tvgpr30.mongodb.net/restaurante?appName=P0nt4s&retryWrites=true&w=majority';
+if (!MONGODB_URI) {
+  console.error('>>> [MongoDB] Erro crítico: A variável de ambiente MONGODB_URI não foi configurada.');
+  process.exit(1);
+}
 
 /**
  * @function conectarBanco
