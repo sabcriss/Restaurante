@@ -76,6 +76,16 @@ function App() {
           } 
         />
 
+        {/* Rota administrativa protegida de gerenciamento de usuários */}
+        <Route 
+          path="/usuarios" 
+          element={
+            <ProtectedRoute>
+              <Dashboard activeTab="usuarios" />
+            </ProtectedRoute>
+          } 
+        />
+
         {/* Rota raiz do dashboard original (Protegida) */}
         <Route 
           path="/" 

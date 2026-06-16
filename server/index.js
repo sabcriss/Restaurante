@@ -6,7 +6,7 @@ import { ReservaRepositorio } from './repositorios/ReservaRepositorio.js';
 import { MesaRepositorio } from './repositorios/MesaRepositorio.js';
 import { PedidoRepositorio } from './repositorios/PedidoRepositorio.js';
 import { ProdutoCardapioRepositorio } from './repositorios/ProdutoCardapioRepositorio.js';
-
+import { UsuarioRepositorio } from './repositorios/UsuarioRepositorio.js';
 
 // Carrega as variáveis de ambiente
 dotenv.config();
@@ -19,6 +19,7 @@ const repositorioReservas = new ReservaRepositorio();
 const repositorioMesas = new MesaRepositorio();
 const repositorioPedidos = new PedidoRepositorio();
 const repositorioProdutos = new ProdutoCardapioRepositorio();
+const repositorioUsuarios = new UsuarioRepositorio();
 
 // Middlewares
 app.use(cors());
@@ -245,5 +246,75 @@ async function iniciarServidor() {
     console.log(`>>> [Backend] Servidor rodando com sucesso na porta ${PORTA}.`);
   });
 }
+
+// ==========================================
+// ROTAS DE USUÁRIOS
+// ==========================================
+
+// READ: Listar todos
+app.get('/api/usuarios', async (req, res) => {
+  try {
+    const usuarios = await repositorioUsuarios.buscarTodos();
+    res.json(usuarios);
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro ao buscar usuários' });
+  }
+});
+
+// CREATE: Criar novo
+app.post('/api/usuarios', async (req, res) => {
+  try {
+    const novoUsuario = await repositorioUsuarios.criar(req.body);
+    res.status(201).json(novoUsuario);
+  } catch (erro) {
+    res.status(400).json({ erro: 'Erro ao criar usuário', detalhes: erro.message });
+  }
+});
+
+// UPDATE: Atualizar existente
+app.put('/api/usuarios/:id', async (req, res) => {
+  try {
+    const usuarioAtualizado = await repositorioUsuarios.atualizar(req.params.id, req.body);
+    res.json(usuarioAtualizado);
+  } catch (erro) {
+    res.status(400).json({ erro: 'Erro ao atualizar usuário' });
+  }
+});
+
+// DELETE: Deletar
+app.delete('/api/usuarios/:id', async (req, res) => {
+  try {
+    await repositorioUsuarios.deletar(req.params.id);
+    res.json({ mensagem: 'Usuário deletado com sucesso' });
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro ao deletar usuário' });
+  }
+});
+
+// ==========================================
+// ROTA DE AUTENTICAÇÃO (LOGIN)
+// ==========================================
+app.post('/api/login', async (req, res) => {
+  try {
+    const { email, senha } = req.body;
+    
+    // Busca todos os usuários e procura um que bata com o email e senha
+    const usuarios = await repositorioUsuarios.buscarTodos();
+    const usuarioValido = usuarios.find(u => u.email === email && u.senha === senha);
+
+    if (usuarioValido) {
+      // Se achou, devolve os dados de sessão
+      res.json({ 
+        sucesso: true, 
+        usuario: { nome: usuarioValido.nome, perfil: usuarioValido.perfil, email: usuarioValido.email } 
+      });
+    } else {
+      res.status(401).json({ erro: 'Usuário ou senha incorretos!' });
+    }
+  } catch (erro) {
+    res.status(500).json({ erro: 'Erro interno ao processar o login.' });
+  }
+});
+
 
 iniciarServidor();

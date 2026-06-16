@@ -8,25 +8,33 @@ function Login() {
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    console.log("Tentando logar com:", email);
+    console.log("Tentando logar no banco de dados com:", email);
 
-    // Validação dos perfis do trabalho
-    if (email === 'admin@restaurante.com' && password === 'admin123') {
-      const usuario = { email, perfil: 'ADMIN' };
-      localStorage.setItem('user_session', JSON.stringify(usuario));
-      console.log("Sessão Admin salva! Navegando...");
-      navigate('/');
-    }
-    else if (email === 'atendente@restaurante.com' && password === 'atendente123') {
-      const usuario = { email, perfil: 'ATENDENTE' };
-      localStorage.setItem('user_session', JSON.stringify(usuario));
-      console.log("Sessão Atendente salva! Navegando...");
-      navigate('/');
-    }
-    else {
-      alert('Usuário ou senha incorretos! Use as credenciais de teste.');
+    try {
+      // Faz a requisição real para a nossa API do backend
+      const resposta = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Enviamos 'senha' porque foi assim que chamamos no backend
+        body: JSON.stringify({ email: email, senha: password }), 
+      });
+
+      const dados = await resposta.json();
+
+      if (resposta.ok && dados.sucesso) {
+        // Se o backend confirmou que o usuário existe, salva a sessão
+        localStorage.setItem('user_session', JSON.stringify(dados.usuario));
+        console.log(`Sessão do ${dados.usuario.perfil} salva! Navegando...`);
+        navigate('/');
+      } else {
+        // Se a senha estiver errada, mostra o erro que veio do backend
+        alert(dados.erro || 'Usuário ou senha incorretos!');
+      }
+    } catch (erro) {
+      console.error("Erro na requisição de login:", erro);
+      alert('Erro ao conectar com o servidor. Verifique se o backend está rodando!');
     }
   };
 
@@ -38,15 +46,15 @@ function Login() {
           <img src={logoImg} alt="Logo Varanda do Nazo" className="sistema-logo" />
         </div>
 
-        <p className="subtitle">Faça login para gerenciar seus pedidos</p>
+        <p className="subtitle">Faça login para gerenciar o sistema</p>
 
         <form onSubmit={handleLogin}>
           <div className="input-group">
-            <label htmlFor="email">E-mail ou Usuário</label>
+            <label htmlFor="email">E-mail</label>
             <input
               type="email"
               id="email"
-              placeholder="admin@restaurante.com"
+              placeholder="Digite seu e-mail cadastrado"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -62,7 +70,7 @@ function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-            /> {/* <--- Tag fechada corretamente aqui! */}
+            />
           </div>
 
           <button type="submit" className="login-button">
@@ -91,11 +99,6 @@ function Login() {
             Fazer uma Reserva (Sem Login)
           </button>
         </form>
-
-        <p className="test-credentials">
-          <strong>ADMIN:</strong> admin@restaurante.com / admin123 <br />
-          <strong>ATENDENTE:</strong> atendente@restaurante.com / atendente123
-        </p>
       </div>
     </div>
   );
