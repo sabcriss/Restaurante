@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Servidor Backend do restaurante (Node.js/Express)
+  backend:
+    container_name: restaurante-backend
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    expose:
+      - "5001"
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - NODE_ENV=production
+      # MONGODB_URI será carregada do arquivo .env no host
+      - MONGODB_URI=${MONGODB_URI}
+    restart: unless-stopped
+    networks:
+      - restaurante-network
+
+  # Servidor Frontend (Nginx servindo o build estático e fazendo proxy de /api)
+  frontend:
+    container_name: restaurante-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - restaurante-network
+
+networks:
+  restaurante-network:
+    driver: bridge

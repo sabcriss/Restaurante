@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PedidoServico } from '../servicos/PedidoServico';
+import { buscarProdutos } from '../servicos/produtoServico';
 import './GerenciadorPedidos.css';
 
 /* ==============================
@@ -68,29 +69,63 @@ function CardMetrica({ rotulo, valor, corBorda }) {
 
 /**
  * @function LinhaItemPedido
- * @description Linha de formulário para um único item do pedido.
- * @param {{ item: Object, indice: number, onAlterarItem: Function, onRemoverItem: Function }} props
+ * @description Linha de formulário para um único item do pedido com seleção baseada no cardápio.
+ * @param {{ item: Object, indice: number, produtosCardapio: Array, onAlterarItem: Function, onRemoverItem: Function }} props
  */
-function LinhaItemPedido({ item, indice, onAlterarItem, onRemoverItem }) {
+function LinhaItemPedido({ item, indice, produtosCardapio, onAlterarItem, onRemoverItem }) {
   /**
    * Propaga a alteração de um campo do item para o componente pai.
+   * Auto-preenche o preço e a categoria correspondente ao selecionar o produto.
    * @param {React.ChangeEvent} evento
    */
   const handleAlteracao = (evento) => {
     const { name, value } = evento.target;
-    onAlterarItem(indice, name, value);
+    
+    if (name === 'nome') {
+      const produtoSelecionado = produtosCardapio.find(prod => prod.nome === value);
+      if (produtoSelecionado) {
+        // PORQUÊ: O banco exige categorias no singular (ex: 'Prato Principal'),
+        // enquanto o cardápio no banco está no plural (ex: 'Pratos Principais').
+        const MAPA_CATEGORIAS = {
+          'Entradas': 'Entrada',
+          'Pratos Principais': 'Prato Principal',
+          'Bebidas': 'Bebida',
+          'Sobremesas': 'Sobremesa'
+        };
+        const categoriaMapeada = MAPA_CATEGORIAS[produtoSelecionado.categoria] || 'Prato Principal';
+
+        onAlterarItem(indice, {
+          nome: produtoSelecionado.nome,
+          precoUnitario: produtoSelecionado.precoBase,
+          categoria: categoriaMapeada
+        });
+      } else {
+        onAlterarItem(indice, {
+          nome: '',
+          precoUnitario: '',
+          categoria: 'Prato Principal'
+        });
+      }
+    } else {
+      onAlterarItem(indice, name, value);
+    }
   };
 
   return (
     <div className="pedido-item-linha">
-      <input
-        type="text"
+      <select
         name="nome"
-        placeholder="Nome do item"
         value={item.nome}
         onChange={handleAlteracao}
         required
-      />
+      >
+        <option value="">Selecione um produto</option>
+        {produtosCardapio.map(prod => (
+          <option key={prod._id || prod.nome} value={prod.nome}>
+            {prod.nome} (R$ {(prod.precoBase || 0).toFixed(2).replace('.', ',')})
+          </option>
+        ))}
+      </select>
       <input
         type="number"
         name="quantidade"
@@ -107,6 +142,8 @@ function LinhaItemPedido({ item, indice, onAlterarItem, onRemoverItem }) {
         step="0.01"
         value={item.precoUnitario}
         onChange={handleAlteracao}
+        readOnly
+        style={{ backgroundColor: '#f7fafc', cursor: 'not-allowed' }}
       />
       <button
         type="button"
@@ -126,12 +163,27 @@ function LinhaItemPedido({ item, indice, onAlterarItem, onRemoverItem }) {
 /**
  * @function ModalPedido
  * @description Modal de criação e edição de pedido com formulário dinâmico de itens.
+ * Carrega a lista de produtos disponíveis do cardápio para vinculação nos itens.
  * @param {{ modoEdicao: boolean, pedidoInicial: Object|null, mesas: string[], onSalvar: Function, onFechar: Function }} props
  */
 function ModalPedido({ modoEdicao, pedidoInicial, mesas, onSalvar, onFechar }) {
   const [formulario, setFormulario] = useState(FORMULARIO_VAZIO);
+  const [produtosCardapio, setProdutosCardapio] = useState([]);
   const [carregando, setCarregando] = useState(false);
   const [erroModal, setErroModal] = useState('');
+
+  // Carrega os produtos do cardápio ao renderizar o modal para alimentar o dropdown
+  useEffect(() => {
+    async function carregarProdutosCardapio() {
+      try {
+        const dados = await buscarProdutos();
+        setProdutosCardapio(dados);
+      } catch (erro) {
+        console.error('Erro ao buscar produtos do cardápio no modal:', erro);
+      }
+    }
+    carregarProdutosCardapio();
+  }, []);
 
   // Preenche o formulário ao abrir em modo de edição
   useEffect(() => {
@@ -159,10 +211,14 @@ function ModalPedido({ modoEdicao, pedidoInicial, mesas, onSalvar, onFechar }) {
     setFormulario(ant => ({ ...ant, [name]: value }));
   };
 
-  const handleAlterarItem = (indice, campo, valor) => {
+  const handleAlterarItem = (indice, campoOuObjeto, valor) => {
     setFormulario(ant => {
       const novosItens = [...ant.itens];
-      novosItens[indice] = { ...novosItens[indice], [campo]: valor };
+      if (typeof campoOuObjeto === 'object' && campoOuObjeto !== null) {
+        novosItens[indice] = { ...novosItens[indice], ...campoOuObjeto };
+      } else {
+        novosItens[indice] = { ...novosItens[indice], [campoOuObjeto]: valor };
+      }
       return { ...ant, itens: novosItens };
     });
   };
@@ -276,6 +332,7 @@ function ModalPedido({ modoEdicao, pedidoInicial, mesas, onSalvar, onFechar }) {
                   key={indice}
                   item={item}
                   indice={indice}
+                  produtosCardapio={produtosCardapio}
                   onAlterarItem={handleAlterarItem}
                   onRemoverItem={handleRemoverItem}
                 />
