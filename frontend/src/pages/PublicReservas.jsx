@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import GerenciadorReservas from '../components/GerenciadorReservas';
-import logoImg from '../assets/Logo.png';
+import logoImg from '../assets/logo.png';
 import '../App.css';
 
 /**
